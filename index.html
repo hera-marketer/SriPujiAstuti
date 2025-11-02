@@ -3,1057 +3,767 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>271 Chat Terminal</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Aplikasi Akun & Penarikan</title>
+    <!-- Memuat Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Fonts: Inter (main body) dan Space Mono (header digital look) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <!-- Konfigurasi Tema Tailwind untuk menggunakan font Inter -->
     <style>
-        /* --- TEMA: PURE BLACK & BLUE NEON --- */
-        :root {
-            --primary-color: #00BFFF; /* Biru Neon */
-            --secondary-color: #33ffcc; /* Aksen Biru Hijau */
-            --text-color: #FFFFFF;    /* Teks Putih */
-            --bg-color: #000000;      /* LATAR BELAKANG TOTAL BLACK */
-            --terminal-bg: #000000;   /* Kontainer juga Total Black */
-            /* Disesuaikan: Message border dan shadow yang lebih lembut */
-            --message-border-color: rgba(0, 191, 255, 0.2); 
-            --message-shadow-color: rgba(0, 191, 255, 0.25);
-            /* VARIABEL KRITIKAL UNTUK FIX MOBILE HEIGHT (Diisi oleh JS) */
-            --app-height: 100vh; /* Fallback 100vh */
-        }
-
-        /* Override Tailwind defaults untuk konsistensi */
-        :root, body {
-            font-family: 'Inter', sans-serif; 
-            font-size: 16px; 
-        }
-        
-        /* KRITIKAL MOBILE FIX: Font sedikit lebih besar di HP */
-        @media (max-width: 640px) {
-            :root, body {
-                font-size: 17px; 
-            }
-        }
-        
-        /* --- FONT KHUSUS UNTUK HEADER (TAMPILAN DIGITAL/MONOSPACE) --- */
-        .header-font {
-            font-family: 'Space Mono', monospace; 
-        }
-
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
-            background-color: var(--bg-color); 
-            color: var(--text-color); 
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            
-            /* KRITIKAL FIX: Menggunakan tinggi stabil dari variabel JS (FULL SCREEN) */
-            height: var(--app-height); 
-            min-height: var(--app-height);
-            max-height: var(--app-height);
-            width: 100vw;
-            overflow: hidden; /* Mencegah body scroll */
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
-
-
-        .terminal-window {
-            background-color: var(--terminal-bg); 
-            /* KRITIKAL PERUBAHAN: MENGISI PENUH LAYAR (Desktop & Mobile) */
-            width: 100vw; 
-            max-width: 100vw;
-            height: var(--app-height); 
-            max-height: var(--app-height);
-            
-            /* --- BORDER TIPIS NEON DI SEMUA SISI (Dipertahankan) --- */
-            border: 1px solid var(--primary-color);
-            box-sizing: border-box;
-            
-            display: flex;
-            flex-direction: column;
-            border-radius: 0; /* Menghilangkan sudut melengkung */
-            overflow: hidden; 
-            padding: 0; /* Menghilangkan padding kontainer utama */
-            position: relative; 
-            margin: 0;
+        /* Style untuk simulasi layar ponsel */
+        .mobile-screen {
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #1a1a1a;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            padding-bottom: 64px; /* Ruang untuk footer */
         }
-
-        /* Scrollbar styling */
-        .scrollbar-futuristic::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .scrollbar-futuristic::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .scrollbar-futuristic::-webkit-scrollbar-thumb {
-            background-color: rgba(0, 191, 255, 0.4);
-            border-radius: 4px;
-        }
-
-        .scrollbar-futuristic::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 191, 255, 0.6);
-        }
-        
-        /* FONT SIZE PENTING */
-        
-        .input-terminal {
-            background-color: rgba(0, 0, 0, 0.5);
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 10px 14px; /* Disesuaikan */
-            border-radius: 6px; /* Disesuaikan */
-            transition: box-shadow 0.2s;
-            opacity: 0.9;
-            font-size: 1.3em; /* Disesuaikan */
-        }
-
-        .input-terminal:focus {
-            outline: none;
-            box-shadow: 0 0 10px var(--primary-color);
-        }
-
-        .terminal-button {
-            background-color: var(--primary-color);
-            color: var(--bg-color);
-            font-weight: 700; 
-            padding: 10px 14px; /* Disesuaikan */
-            border: none;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 191, 255, 0.7);
-            font-size: 1.4em; /* Disesuaikan */
-            border-radius: 6px; /* Disesuaikan */
-        }
-        
-        .fb-button {
-            background-color: #1877F2; 
-            color: white;
-            box-shadow: 0 0 5px rgba(24, 119, 242, 0.7);
-        }
-        .fb-button:hover {
-            background-color: #166fe5;
-            box-shadow: 0 0 15px #1877F2;
-        }
-
-        .terminal-button:hover {
-            background-color: #008fcc;
-            box-shadow: 0 0 15px var(--primary-color);
-        }
-
-        .glow-text {
-            text-shadow: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color);
-        }
-
-        /* Style untuk Chat Log (Disesuaikan) */
-        .chat-log-container { border: none; padding: 5px; margin-bottom: 5px; background-color: transparent; }
-        .log-divider { border-top: 1px dashed rgba(255, 255, 255, 0.1); margin: 5px 0; }
-        .message-container { display: flex; width: 100%; margin-bottom: 12px; } /* Jarak antar pesan sedikit dikurangi */
-        
-        /* Message Styling */
-        .chat-message {
-            padding: 10px 12px; /* Disesuaikan */
-            border-radius: 6px; /* Disesuaikan */
-            word-wrap: break-word;
-            background-color: rgba(255, 255, 255, 0.03); /* Latar belakang lebih transparan */
-            font-size: 1.2em; /* Font Chat Log Disesuaikan */
-            line-height: 1.5; 
-            border: 1px solid var(--message-border-color); 
-            box-shadow: 0 0 2px var(--message-shadow-color); /* Shadow lebih lembut */
-            transition: all 0.2s ease-in-out; 
-        }
-        .chat-message:hover { box-shadow: 0 0 4px var(--primary-color); }
-        
-        /* Stronger highlight for the current user's message */
-        .chat-message-self {
-            border: 1px solid #00FF00; /* Green border */
-            box-shadow: 0 0 5px rgba(0, 255, 0, 0.5); /* Stronger green glow, tapi tetap lembut */
-        }
-        
-        /* --- STYLE KHUSUS BOT: Centered, Soft Font, No background/border --- */
-        .bot-message-style {
-            /* Font lebih tipis dan lembut */
-            font-weight: 300; 
-            font-style: italic;
-            /* Hapus padding, background, dan border agar terlihat seperti pesan sistem */
-            padding: 0;
-            background-color: transparent;
-            border: none;
-            box-shadow: none;
-            /* Memastikan teks rata tengah dalam kotaknya */
+        /* Styling khusus untuk input kata sandi PIN */
+        .pin-input {
+            width: 40px;
+            height: 40px;
             text-align: center;
+            font-size: 1.5rem;
+            border: 1px solid #4a4a4a;
+            background-color: #333333;
+            color: white;
+            border-radius: 8px;
+            outline: none;
+            caret-color: transparent; /* Menyembunyikan kursor */
         }
-
-        /* Timestamp Styling */
-        .message-timestamp {
-            font-size: 0.9em; /* Font lebih kecil */
+        .pin-input:focus {
+            border-color: #6366f1;
+        }
+        /* Styling untuk keyboard angka */
+        .numeric-key {
+            background-color: #333333;
+            color: white;
+            font-size: 1.8rem;
+            font-weight: 500;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 60px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.1s ease-in-out;
+        }
+        .numeric-key:active {
+            background-color: #4a4a4a;
+        }
+        /* Untuk efek pengumuman berjalan */
+        .announcement-ticker {
+            white-space: nowrap;
+            overflow: hidden;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .announcement-ticker > span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: ticker 20s linear infinite;
+        }
+        @keyframes ticker {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(-100%, 0);
+            }
         }
     </style>
 </head>
-<body>
+<body onload="showPage('home')">
 
-    <div id="app" class="terminal-window">
-        <!-- Content will be injected here by JavaScript -->
+<div class="mobile-screen">
+    <!-- Header Aplikasi (Dinamis) -->
+    <header id="app-header" class="bg-[#1a1a1a] p-4 flex justify-between items-center text-white border-b border-gray-800 fixed w-full max-w-[420px] z-10 top-0">
+        <!-- Konten Header akan diperbarui oleh JavaScript -->
+    </header>
+
+    <!-- Konten Utama (Dinamis) -->
+    <main class="pt-16 pb-4 px-4 space-y-4">
+        
+        <!-- Halaman BERANDA (HOME) - Dashboard Bisnis -->
+        <div id="home-page" class="page-content hidden">
+            <!-- Pengumuman Berjalan -->
+            <section class="bg-yellow-800 text-yellow-100 text-xs py-2 px-4 rounded-xl shadow-md overflow-hidden mt-2">
+                <div class="flex items-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882l-7 3.5v5.364m14-8.864l-7-3.5-7 3.5m14-3.5v5.364m0 0l-7 3.5m7-3.5h-7" />
+                    </svg>
+                    <div class="announcement-ticker">
+                        <span>Selamat datang kembali, AstutiHera1! Raih target pendapatan harian Anda dan tingkatkan level VIP. Dapatkan bonus setoran 5% hari ini!</span>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Ringkasan Saldo Utama -->
+            <section class="bg-gray-800 p-6 rounded-xl shadow-lg text-white space-y-4">
+                <p class="text-sm text-gray-400">Total Saldo Akun</p>
+                <div class="flex items-center justify-between">
+                    <span class="text-3xl font-extrabold text-teal-400">Rp 7.275.000,00</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m0 0l-1 1h4m-4-1v2a2 2 0 002 2h4a2 2 0 002-2v-2m1-1l2-2m-2-2m-7-2h4m-4 4h4" />
+                    </svg>
+                </div>
+            </section>
+            
+            <!-- Metrik Kinerja Hari Ini -->
+            <section class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-900 p-4 rounded-xl shadow-md text-white">
+                    <p class="text-sm text-gray-400">Pendapatan Hari Ini</p>
+                    <p class="text-xl font-bold mt-1 text-green-400">Rp 125.000,00</p>
+                    <p class="text-xs text-gray-500 mt-1 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-green-400 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                        </svg>
+                        +2.5% dari kemarin
+                    </p>
+                </div>
+                <div class="bg-gray-900 p-4 rounded-xl shadow-md text-white">
+                    <p class="text-sm text-gray-400">Tugas Selesai</p>
+                    <!-- Mengubah tampilan tugas selesai menjadi 15/15 -->
+                    <p class="text-xl font-bold mt-1 text-blue-400">15 / 15</p>
+                    <p class="text-xs text-gray-500 mt-1">Target harian tercapai!</p>
+                </div>
+            </section>
+
+            <!-- Aksi Cepat -->
+            <section class="flex space-x-4">
+                <button onclick="showMessage('Menuju Halaman Deposit/Top Up')" class="flex-1 bg-green-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-green-700 transition duration-150 shadow-md flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Deposit</span>
+                </button>
+                <button onclick="showPage('penarikan')" class="flex-1 bg-red-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-red-700 transition duration-150 shadow-md flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Tarik Dana</span>
+                </button>
+            </section>
+        </div>
+
+        <!-- Halaman KETENTUAN (TERMS) - Kebijakan Perusahaan -->
+        <div id="terms-page" class="page-content hidden">
+            <section class="bg-gray-800 text-white rounded-xl shadow-lg p-6 space-y-6 mt-2">
+                <h2 class="text-2xl font-extrabold text-teal-400 border-b border-gray-700 pb-3">Syarat & Ketentuan Layanan</h2>
+                
+                <article class="space-y-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-400 mb-2">1. Penerimaan Ketentuan</h3>
+                        <p class="text-gray-300 text-sm">Dengan mengakses dan menggunakan Layanan Hera, Anda menerima dan setuju untuk terikat oleh Syarat dan Ketentuan ini. Jika Anda tidak setuju, Anda tidak boleh menggunakan Layanan.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-400 mb-2">2. Akun Pengguna</h3>
+                        <ul class="list-disc list-inside text-gray-300 text-sm pl-4 space-y-1">
+                            <li>Anda bertanggung jawab menjaga kerahasiaan kata sandi dan PIN penarikan Anda.</li>
+                            <li>Setiap akun hanya boleh digunakan oleh satu pengguna.</li>
+                            <li>Pelanggaran terhadap keamanan akun dapat mengakibatkan penangguhan permanen.</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-400 mb-2">3. Kebijakan Penarikan Dana</h3>
+                        <p class="text-gray-300 text-sm">Penarikan dana diproses dalam waktu 1x24 jam kerja. Batas penarikan minimum adalah Rp 50.000,00. Kami berhak meninjau setiap permintaan penarikan yang dianggap mencurigakan.</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-bold text-blue-400 mb-2">4. Pembatalan Layanan</h3>
+                        <p class="text-gray-300 text-sm">Kami berhak untuk mengubah atau menghentikan layanan kapan saja, dengan atau tanpa pemberitahuan, tanpa kewajiban kepada Anda atau pihak ketiga mana pun.</p>
+                    </div>
+                </article>
+                
+                <p class="text-center text-xs text-gray-500 pt-4">Diperbarui terakhir: 1 November 2025</p>
+            </section>
+        </div>
+
+        <!-- Halaman PEKERJAAN (TASKS) - Peluang Penghasilan (Sudah Diperbarui) -->
+        <div id="tasks-page" class="page-content hidden">
+            <h2 class="text-2xl font-extrabold text-white mb-4 mt-2">Peluang Tugas VIP0</h2>
+
+            <!-- Pesan Tugas Selesai -->
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg text-white text-center space-y-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-xl font-bold text-white">Semua Tugas Selesai!</h3>
+                <p class="text-gray-300">Anda telah menyelesaikan semua tugas harian yang tersedia untuk Peringkat VIP0.</p>
+                <p class="text-lg font-semibold text-yellow-400">Tugas Baru akan tiba dalam 4 Hari Lagi.</p>
+                <p class="text-sm text-gray-500">Tingkatkan Peringkat VIP Anda untuk mendapatkan lebih banyak tugas harian.</p>
+            </div>
+            
+            <p class="text-center text-sm text-gray-500 mt-6">Selamat! Penghasilan harian Anda telah dikreditkan.</p>
+        </div>
+        
+        <!-- Halaman NOTIFIKASI (Diperbarui) -->
+        <div id="notifications-page" class="page-content hidden">
+            <h2 class="text-2xl font-extrabold text-white mb-4 mt-2">Notifikasi Saya</h2>
+            
+            <div class="bg-gray-800 rounded-xl shadow-lg divide-y divide-gray-700 text-white">
+                
+                <!-- Notifikasi 1: Sistem -->
+                <div class="p-4 flex space-x-3 items-start hover:bg-gray-700 transition duration-150">
+                    <div class="mt-1 p-1 bg-red-600 rounded-full flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Peringatan Sistem!</p>
+                        <p class="text-gray-300 text-sm mt-1">Sistem sedang menjalani pemeliharaan singkat. Penarikan mungkin mengalami penundaan 1 jam. Terima kasih atas kesabaran Anda.</p>
+                        <p class="text-xs text-gray-500 mt-1">5 menit yang lalu</p>
+                    </div>
+                </div>
+                
+                <!-- Notifikasi 2: Promosi (Bergeser dari urutan 3) -->
+                <div class="p-4 flex space-x-3 items-start hover:bg-gray-700 transition duration-150">
+                    <div class="mt-1 p-1 bg-blue-600 rounded-full flex-shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 15v2m-2-2h4m3 0V7a3 3 0 00-3-3H7a3 3 0 00-3 3v8m14 0h-3" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Bonus VIP Baru!</p>
+                        <p class="text-gray-300 text-sm mt-1">Dapatkan bonus referensi ekstra 10% untuk setiap teman yang mendaftar dan melakukan deposit pertama. Ajak sekarang!</p>
+                        <p class="text-xs text-gray-500 mt-1">1 hari yang lalu</p>
+                    </div>
+                </div>
+            </div>
+            <p class="text-center text-sm text-gray-500 mt-6">Semua notifikasi dibaca.</p>
+        </div>
+
+
+        <!-- Halaman AKUN SAYA (Diperbarui dengan notif pemeliharaan) -->
+        <div id="akun-page" class="page-content hidden">
+            <!-- Informasi Profil -->
+            <section class="flex items-center space-x-4 p-4 bg-gray-800 rounded-xl shadow-lg mt-2">
+                <!-- Logo HERA (Placeholder SVG) -->
+                <div class="p-2 border border-white rounded-full bg-white flex items-center justify-center">
+                    <span class="text-xl font-bold text-gray-800 tracking-wider">HERA</span>
+                </div>
+                <div class="flex-grow">
+                    <div class="flex items-center space-x-2">
+                        <!-- WARNA USERNAME DIUBAH KE TEXT-WHITE -->
+                        <span class="text-xl font-bold text-white">AstutiHera1</span> 
+                        <!-- Icon Emas/Coin (Placeholder) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.817 2.046a1 1 0 00-.363 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.817-2.046a1 1 0 00-1.175 0l-2.817 2.046c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.363-1.118L2.203 7.729c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Peringkat dan Saldo -->
+            <section class="flex justify-between items-center p-4 bg-[#242424] rounded-xl shadow-md text-white">
+                <div class="text-left">
+                    <p class="text-sm text-gray-400">Peringkat Anda</p>
+                    <p class="text-xl font-bold text-teal-400 mt-1">VIP1</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-400">Saldo Akun</p>
+                    <p class="text-xl font-bold text-white mt-1">7.275.000,00</p>
+                </div>
+            </section>
+
+            <!-- Daftar Menu Akun -->
+            <div class="bg-[#242424] rounded-xl shadow-lg divide-y divide-gray-700 text-white">
+                <!-- Item Menu: Riwayat Transaksi -->
+                <!-- Diubah menjadi memanggil maintenanceMessage() -->
+                <a href="#" onclick="maintenanceMessage()" class="flex items-center justify-between p-4 hover:bg-gray-700 transition duration-150 rounded-t-xl">
+                    <span class="text-lg">Riwayat Transaksi</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l3 3a1 1 0 001.414-1.414L10 10.586V6z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                
+                <!-- Item Menu: Ganti Kata Sandi -->
+                <!-- Diubah menjadi memanggil maintenanceMessage() -->
+                <a href="#" onclick="maintenanceMessage()" class="flex items-center justify-between p-4 hover:bg-gray-700 transition duration-150">
+                    <span class="text-lg">Ganti Kata Sandi</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+
+                <!-- Item Menu: Informasi Akun -->
+                <!-- Dikembalikan untuk menampilkan halaman Informasi Akun -->
+                <a href="#" onclick="showPage('informasi-akun')" class="flex items-center justify-between p-4 hover:bg-gray-700 transition duration-150">
+                    <span class="text-lg">Informasi Akun</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </a>
+                
+                <!-- Item Menu: Ganti Bahasa -->
+                <!-- Diubah menjadi memanggil maintenanceMessage() -->
+                <a href="#" onclick="maintenanceMessage()" class="flex items-center justify-between p-4 hover:bg-gray-700 transition duration-150">
+                    <span class="text-lg">Ganti bahasa</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 0115 11.236c0 1.299-.54 2.195-1.124 2.529-.55.337-1.196.22-1.782-.314l-2.48-.905-.205.817 2.48 1.121c.245.111.49.222.735.333a2.915 2.915 0 001.077-.123c.532-.192.83-.538.83-.984 0-.446-.298-.792-.83-.984s-1.077-.123-1.077-.123L7.5 14h1.048z" />
+                    </svg>
+                </a>
+                
+                <!-- Item Menu: Keluar Akun (Log Out) -->
+                <!-- Tetap menggunakan fungsi keluar akun normal -->
+                <a href="#" onclick="showMessage('Anda telah keluar akun!')" class="flex items-center justify-between p-4 hover:bg-gray-700 transition duration-150 rounded-b-xl">
+                    <span class="text-lg">Keluar akun</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                </a>
+            </div>
+            <!-- Tombol Penarikan di halaman Akun -->
+            <!-- Diubah menjadi memanggil maintenanceMessage() -->
+            <button onclick="maintenanceMessage()" class="w-full bg-blue-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-blue-700 transition duration-150 shadow-md mt-6">
+                Penarikan Saldo
+            </button>
+        </div>
+        
+        <!-- Halaman INFORMASI AKUN (EXISITING) -->
+        <div id="informasi-akun-page" class="page-content hidden">
+            <section class="bg-[#242424] text-white rounded-xl shadow-lg p-4 space-y-4 mt-2">
+                <h2 class="text-xl font-bold text-teal-400 border-b border-gray-700 pb-3 mb-3">Rincian Pengguna</h2>
+                <div class="space-y-3 divide-y divide-gray-700">
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">ID Pengguna</span>
+                        <span class="font-semibold text-white">AstutiHera1</span>
+                    </div>
+                    <!-- Peringkat Akun sudah VIP1 -->
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">Peringkat Akun</span>
+                        <span class="font-semibold text-white text-teal-400">VIP1</span>
+                    </div>
+                    <!-- PERUBAHAN: Nomor Ponsel diubah -->
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">No. Ponsel</span>
+                        <span class="font-semibold text-white">081953512626</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">Tanggal Daftar</span>
+                        <span class="font-semibold text-white">2023-11-01 10:30</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-[#242424] text-white rounded-xl shadow-lg p-4 space-y-4">
+                <h2 class="text-xl font-bold text-teal-400 border-b border-gray-700 pb-3 mb-3">Informasi Bank Terikat</h2>
+                <div class="space-y-3 divide-y divide-gray-700">
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">Nama Bank</span>
+                        <span class="font-semibold text-white">Bank BSI</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">No. Rekening</span>
+                        <span class="font-semibold text-white">********5411</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-3">
+                        <span class="text-gray-400">Nama Pemilik</span>
+                        <span class="font-semibold text-white">Sri Puji Astuti</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tombol memanggil maintenanceMessage() -->
+            <button onclick="maintenanceMessage()" class="w-full bg-yellow-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-yellow-700 transition duration-150 shadow-md mt-6">
+                Ubah Informasi Bank
+            </button>
+        </div>
+        
+        <!-- Halaman PENARIKAN SALDO (EXISITING) -->
+        <div id="penarikan-page" class="page-content hidden">
+            <!-- Saldo Akun dan Nilai Kredit -->
+            <section class="flex justify-between items-center text-gray-300 bg-gray-800 p-4 rounded-xl shadow-inner mt-2">
+                <div class="text-left">
+                    <p class="text-sm">Saldo Akun:</p>
+                    <p class="text-xl font-bold text-white mt-1">Rp 7.275.000,00</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm">NILAI KREDIT:</p>
+                    <p class="text-xl font-bold text-white mt-1">100</p>
+                </div>
+            </section>
+
+            <!-- Input Jumlah Penarikan -->
+            <section class="bg-[#242424] text-white rounded-xl shadow-lg p-4">
+                <label for="withdrawal-amount" class="block text-gray-400 text-sm mb-2">Jumlah Penarikan</label>
+                <div class="flex items-center justify-between">
+                    <input type="text" id="withdrawal-amount" class="bg-transparent text-white text-3xl font-bold w-full focus:outline-none" value="7275000,00" readonly>
+                    <button onclick="fillAllAmount()" class="text-blue-400 font-semibold px-3 py-1 bg-gray-700 rounded-lg text-sm hover:bg-gray-600 transition duration-150">SEMUA</button>
+                </div>
+            </section>
+
+            <!-- Informasi Penarikan -->
+            <section class="bg-[#242424] text-white rounded-xl shadow-lg p-4 space-y-4">
+                <h2 class="text-lg font-semibold text-gray-300">Informasi Penarikan</h2>
+                
+                <!-- Item Informasi: BANK -->
+                <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <span class="text-gray-400">BANK:</span>
+                    <span class="font-semibold">Bank BSI</span>
+                </div>
+                
+                <!-- Item Informasi: NOMOR REKENING BARU -->
+                <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <span class="text-gray-400">NOMOR REKENING:</span>
+                    <span class="font-semibold">********5411</span>
+                </div>
+                
+                <!-- Item Informasi: ATAS NAMA -->
+                <div class="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <span class="text-gray-400">ATAS NAMA:</span>
+                    <span class="font-semibold">Sri Puji Astuti</span>
+                </div>
+            </section>
+
+            <!-- Tombol untuk konfirmasi penarikan (akan memicu PIN modal) -->
+            <button onclick="showPinModal()" class="w-full bg-blue-600 text-white py-3 rounded-xl text-lg font-bold hover:bg-blue-700 transition duration-150 shadow-md mt-6">
+                Konfirmasi Penarikan
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Modal Input Kata Sandi Penarikan (PIN) -->
+    <div id="pin-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center z-50 hidden">
+        <div class="bg-gray-800 p-6 pt-8 rounded-t-3xl w-full max-w-[420px] shadow-2xl relative">
+            <!-- Background Biru Melengkung -->
+            <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-teal-500 to-blue-600 rounded-t-3xl -z-10"></div>
+            <div class="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-teal-500 to-blue-600 rounded-t-3xl opacity-70 blur-md -z-20"></div>
+
+            <h3 class="text-xl font-bold text-white text-center mb-2 z-10 relative">Masukkan Kata Sandi Penarikan</h3>
+            <p class="text-gray-300 text-center mb-6 text-sm">Masukkan Kata Sandi Penarikan 6 Angka</p>
+
+            <!-- Input PIN -->
+            <div class="flex justify-center space-x-2 mb-8">
+                <input type="password" id="pin-digit-1" class="pin-input" maxlength="1" readonly>
+                <input type="password" id="pin-digit-2" class="pin-input" maxlength="1" readonly>
+                <input type="password" id="pin-digit-3" class="pin-input" maxlength="1" readonly>
+                <input type="password" id="pin-digit-4" class="pin-input" maxlength="1" readonly>
+                <input type="password" id="pin-digit-5" class="pin-input" maxlength="1" readonly>
+                <input type="password" id="pin-digit-6" class="pin-input" maxlength="1" readonly>
+            </div>
+
+            <!-- Numeric Keypad -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="numeric-key" onclick="appendPin('1')">1</div>
+                <div class="numeric-key" onclick="appendPin('2')">2</div>
+                <div class="numeric-key" onclick="appendPin('3')">3</div>
+                <div class="numeric-key" onclick="appendPin('4')">4</div>
+                <div class="numeric-key" onclick="appendPin('5')">5</div>
+                <div class="numeric-key" onclick="appendPin('6')">6</div>
+                <div class="numeric-key" onclick="appendPin('7')">7</div>
+                <div class="numeric-key" onclick="appendPin('8')">8</div>
+                <div class="numeric-key" onclick="appendPin('9')">9</div>
+                <div class="numeric-key bg-transparent shadow-none border-0 text-gray-500" onclick="clearLastPin()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 10h10a4 4 0 010 8H3V10z" />
+                    </svg>
+                </div> <!-- Backspace/Clear -->
+                <div class="numeric-key" onclick="appendPin('0')">0</div>
+                <div class="numeric-key bg-transparent shadow-none border-0 text-gray-500" onclick="hidePinModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </div> <!-- Close -->
+            </div>
+        </div>
     </div>
 
-    <!-- Firebase Imports (Menggunakan SDK 11.6.1 untuk stabilitas) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, query, onSnapshot, addDoc, serverTimestamp, setLogLevel, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        // MENGATUR LEVEL LOGGING FIREBASE
-        setLogLevel('debug');
-        
-        // =========================================================================
-        // !!! PENTING: KONFIGURASI FIREBASE ANDA TELAH DIMASUKKAN DI SINI !!!
-        // =========================================================================
-        const MANUAL_CONFIG = {
-            apiKey: "AIzaSyA_FynN_E6zxOEHo3k2t-olypo2Tu_D-zQ",
-            authDomain: "webchatapp90.firebaseapp.com",
-            projectId: "webchatapp90",
-            storageBucket: "webchatapp90.firebasestorage.app",
-            messagingSenderId: "199231928341",
-            appId: "1:199231928341:web:cb1d7e99d65c3e2d06361c",
-        };
-        // =========================================================================
-
-        // --- Global Variables (Provided by Canvas Environment) ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : MANUAL_CONFIG.projectId || 'manual-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : MANUAL_CONFIG;
-        
-        let app, db, auth, userId = null;
-        let unsubscribe = null; 
-        let clockInterval = null; 
-        
-        // --- CONSTANTS ---
-        const MESSAGES_COLLECTION_NAME = 'messages';
-        // Reverted: Menggunakan nama koleksi asli ('hacker_chat_rooms')
-        const ROOMS_COLLECTION_NAME = 'hacker_chat_rooms'; 
-        const BOT_NAME = 'machine bot'; 
-        // --- TAMBAHAN: Default Room ID ---
-        const DEFAULT_ROOM_ID = 'WERFDSGT';
-        
-        // --- VALIDASI REGEX TAMBAHAN ---
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const phoneRegex = /^\+?\d{6,}$/; 
-        const roomIDRegex = /^[A-Z0-9]{8}$/; 
-        
-        // --- User Color Mapping for Distinguishing Senders ---
-        const NEON_COLORS = [
-            '#FF33CC', // Pink
-            '#33FFCC', // Blue-Green
-            '#FFFF33', // Yellow
-            '#66CCFF', // Light Blue
-            '#CC66FF', // Purple
-            '#FF6633', // Orange
-            '#33FF66', // Light Green
-            '#FF66CC'  // Magenta
-        ];
-        let userColorMap = {};
-
-        /** Menetapkan warna neon yang konsisten berdasarkan ID pengguna. */
-        const getUserColor = (id) => {
-            if (userColorMap[id]) {
-                return userColorMap[id];
-            }
-
-            const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const colorIndex = hash % NEON_COLORS.length;
-            const color = NEON_COLORS[colorIndex];
-
-            userColorMap[id] = color;
-            return color;
-        };
-
-
-        // --- App State ---
-        let state = {
-            currentView: 'main', 
-            username: '',
-            roomId: '',
-            isHost: false,
-            chatMessages: [],
-            systemLog: [], 
-            isSystemLoading: false, 
-            isFirebaseReady: false, 
-            loading: false,
-            error: null,
-            isLoggingOut: false 
-        };
-        
-        // --- PERSISTENCE LOGIC: LOAD STATE FIRST ---
-
-        const loadStateFromLocalStorage = () => {
-            try {
-                // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-                const persisted = localStorage.getItem('hackerChatState');
-                if (persisted) {
-                    const loadedState = JSON.parse(persisted);
-                    
-                    if (loadedState.roomId && loadedState.username && loadedState.isHost === false) {
-                         state = { 
-                             ...state, 
-                             ...loadedState,
-                             currentView: loadedState.roomId ? 'chat' : 'main' 
-                         }; 
-                    }
-                }
-            } catch (e) {
-                console.error("Error loading state from localStorage", e);
-                // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-                localStorage.removeItem('hackerChatState'); 
-            }
-        };
-
-        const saveStateToLocalStorage = () => {
-            const persistState = {
-                username: state.username,
-                roomId: state.roomId,
-                isHost: state.isHost,
-                currentView: state.currentView,
-            };
-            if(state.roomId) {
-                // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-                localStorage.setItem('hackerChatState', JSON.stringify(persistState));
-            } else {
-                // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-                localStorage.removeItem('hackerChatState');
-            }
-        };
-
-        loadStateFromLocalStorage();
-
-        // --- Utility Functions ---
-        
-        /** KRITIKAL FIX: Mengatur tinggi viewport yang benar untuk mobile (agar 100vh tidak terpotong) */
-        const setAppHeight = () => {
-            const doc = document.documentElement;
-            const newHeight = `${window.innerHeight}px`;
-            doc.style.setProperty('--app-height', newHeight);
-        };
-
-
-        /** Logs an error message to the console and updates app state. */
-        const logError = (msg, err = null) => {
-            // Reverted: Menggunakan label log asli ('HACKER CHAT ERROR')
-            console.error(`[HACKER CHAT ERROR] ${msg}`, err);
-             const uiMsg = `${msg} | CEK CONSOLE BROWSER untuk kode kesalahan.`;
-             setNotification(uiMsg, 7000); 
-             if (err) console.error(err);
-             return false; 
-        }
-
-        /** Simple function to update state and re-render */
-        const updateState = (newState) => {
-            state = { ...state, ...newState };
-            saveStateToLocalStorage(); 
-            render();
-        }
-        
-        /** Displays a temporary status message (not a critical error) on the UI. */
-        const setNotification = (msg, duration = 5000) => {
-            // Reverted: Menggunakan label log asli ('HACKER CHAT STATUS')
-            console.log(`[HACKER CHAT STATUS] ${msg}`); 
-            updateState({ error: msg }); 
-
-            setTimeout(() => {
-                if (state.error === msg) {
-                    updateState({ error: null });
-                }
-            }, duration);
-        }
-
-        /** Exponential backoff for Firebase API calls */
-        const withRetry = async (fn, maxRetries = 5, delay = 1000) => {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    return await fn();
-                } catch (error) {
-                    if (i === maxRetries - 1) {
-                        throw error;
-                    }
-                    console.warn(`Attempt ${i + 1} failed. Retrying in ${delay / 1000}s...`, error);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
-                }
-            }
-        };
-        
-        /** Fungsi untuk menghentikan interval jam */
-        const stopClock = () => {
-            if (clockInterval) {
-                clearInterval(clockInterval);
-                clockInterval = null;
-            }
-        };
-
-        /** Fungsi untuk memperbarui tampilan jam setiap detik (HANYA WAKTU) */
-        const updateClock = () => {
-            const clockElement = document.getElementById('real-time-clock');
-            if (clockElement) {
-                const now = new Date();
-                // HANYA WAKTU (jam, menit, detik)
-                const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                
-                // UKURAN FONT JAM DITURUNKAN DARI text-xl/text-2xl MENJADI text-lg/text-xl
-                clockElement.innerHTML = `
-                    <span class="text-lg sm:text-xl font-bold" style="color: var(--secondary-color); text-shadow: 0 0 5px var(--secondary-color);">
-                        ${timeString}
-                    </span> 
-                `;
-            }
-        };
-
-
-        /** Checks the current state of critical Firebase variables for debugging */
-        const runDiagnostic = () => {
-            let diagMsg = "";
-            diagMsg += state.isFirebaseReady ? " [FIREBASE READY OK] " : " [FIREBASE PENDING/FAILED] ";
-            diagMsg += userId ? ` [AUTH OK: ${userId.substring(0, 6)}...] ` : " [AUTH FAILED/PENDING] ";
-            diagMsg += appId !== 'manual-app-id' ? " [APP ID OK] " : " [DEFAULT APP ID] ";
+    <!-- Navigasi Bawah (Fixed Footer) -->
+    <footer class="fixed bottom-0 w-full max-w-[420px] bg-gray-900 border-t border-gray-800 flex justify-around items-center h-16 shadow-2xl z-10">
+        <!-- Beranda -->
+        <a href="#" onclick="showPage('home')" id="nav-home" class="footer-link text-gray-400 flex flex-col items-center text-xs transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2-2m0 0l7-7 7 7M19 10v10a1 1 0 01-1 1h-3M15 19v-2a2 2 0 00-2-2H9a2 2 0 00-2 2v2" />
+            </svg>
+            Beranda
+        </a>
+        <!-- Ketentuan -->
+        <a href="#" onclick="showPage('terms')" id="nav-terms" class="footer-link text-gray-400 flex flex-col items-center text-xs transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5l3 3m-4 4h8m-4 4h.01" />
+            </svg>
+            Ketentuan
+        </a>
+        <!-- Pekerjaan -->
+        <a href="#" onclick="showPage('tasks')" id="nav-tasks" class="footer-link text-gray-400 flex flex-col items-center text-xs transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 13.25L13.25 21 3 10.75V3h7.75L21 13.25z" />
+            </svg>
+            Pekerjaan
+        </a>
+        <!-- Notifikasi -->
+        <a href="#" onclick="showPage('notifications')" id="nav-notifications" class="footer-link text-gray-400 flex flex-col items-center text-xs transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-2.81A3 3 0 0018 14V8a6 6 0 00-6-6 6 6 0 00-6 6v6a3 3 0 00.405 1.19L4 17h5m5 0v1a3 3 0 01-6 0v-1m6 0H9" />
+            </svg>
+            Notifikasi
+        </a>
+        <!-- Profil (Akun Saya) -->
+        <a href="#" onclick="showPage('akun')" id="nav-akun" class="footer-link text-gray-400 flex flex-col items-center text-xs transition duration-150">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Profil
+        </a>
+    </footer>
     
-            const fullMsg = "DIAGNOSTIC REPORT: " + diagMsg + " - Cek Konsol Developer (F12) untuk log Firebase Debug.";
-            setNotification(fullMsg, 10000);
-        };
+    <!-- Simulasi Kotak Pesan - diperlukan untuk showMessage() -->
+    <div id="message-box" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-xs w-full text-center">
+            <p id="message-text" class="text-gray-800 font-semibold mb-4"></p>
+            <button onclick="hideMessage()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150">Tutup</button>
+        </div>
+    </div>
+</div>
 
-        // --- Firebase Setup (KRITIKAL: Dipastikan berjalan secara berurutan) ---
+<script>
+    const pinInputs = document.querySelectorAll('.pin-input');
+    let currentPin = [];
+    let activePage = 'home'; // Status halaman aktif saat ini
+    
+    // PIN Penarikan yang Diminta (808080)
+    const TARGET_PIN = "808080"; 
+    
+    // Pesan Pemeliharaan Global
+    const MAINTENANCE_MESSAGE = "Sistem sedang melakukan pemeliharaan rutin. Akses ke menu ini akan dibuka kembali setelah pemeliharaan selesai. Terima kasih atas kesabarannya.";
 
-        const setupFirebase = async () => {
-            
-            if (!firebaseConfig || firebaseConfig.apiKey === 'YOUR_API_KEY_HERE' || !firebaseConfig.projectId) {
-                return logError("Koneksi Gagal: Konfigurasi Firebase tidak ditemukan atau masih placeholder.");
-            }
-            
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-            } catch (initError) {
-                return logError("Koneksi Gagal: Gagal menginisialisasi layanan Firebase. Periksa ID Proyek/Kunci API Anda.", initError);
-            }
+    // ----------------------------------------------------
+    // FUNGSI UTAMA UNTUK MENGELOLA TAMPILAN HALAMAN
+    // ----------------------------------------------------
+    function showPage(pageId) {
+        // Sembunyikan semua konten halaman
+        document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
 
-            // PERBAIKAN KRITIKAL: Menangani __initial_auth_token secara langsung.
-            const authPromise = new Promise(resolve => {
-                const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        unsubscribeAuth(); 
-                        resolve(true);
-                    } else {
-                        try {
-                            if (typeof __initial_auth_token !== 'undefined') {
-                                await withRetry(() => signInWithCustomToken(auth, __initial_auth_token));
-                            } else {
-                                await withRetry(() => signInAnonymously(auth));
-                            }
-                        } catch (error) {
-                            console.error("Authentication Attempt Failed:", error);
-                            userId = null;
-                            unsubscribeAuth();
-                            resolve(false); 
-                        }
-                    }
-                });
-            });
-
-            const authSuccess = await authPromise;
-            
-            if (!authSuccess || !userId) {
-                 updateState({ isFirebaseReady: false });
-                 return logError("Otentikasi Gagal: Tidak dapat memperoleh User ID. Pastikan Otentikasi Anonim diaktifkan.");
-            }
-
-            updateState({ isFirebaseReady: true });
-            
-            if (state.roomId && state.currentView === 'chat') {
-                startChatListener(state.roomId);
-            }
-            
-            console.log(`[FIREBASE READY] User ID: ${userId}, App ID: ${appId}`);
-        };
-
-
-        // --- Chat Logic ---
-
-        const getMessagesRef = (roomId) => {
-            if (!db) throw new Error("Firestore not initialized.");
-            // MANDATORY Firestore path structure for public data
-            const roomDocPath = `/artifacts/${appId}/public/data/${ROOMS_COLLECTION_NAME}/${roomId}`;
-            return collection(db, roomDocPath, MESSAGES_COLLECTION_NAME);
-        };
-
-        const sendMessage = async (messageText, messageType = 'chat') => {
-            if (!state.isFirebaseReady) return logError("Koneksi belum siap. Tunggu hingga status FIREBASE READY.");
-            if (!db || !state.roomId || !state.username || (!messageText.trim() && messageType === 'chat')) return;
-
-            const message = {
-                sender: state.username,
-                text: messageText,
-                timestamp: serverTimestamp(),
-                userId: userId, // CRITICAL: Ensure local userId is saved
-                messageType: messageType 
-            };
-
-            try {
-                await withRetry(() => addDoc(getMessagesRef(state.roomId), message));
-            } catch (error) {
-                logError("Gagal mengirim pesan. Periksa Aturan Keamanan Firestore.", error);
-            }
-        };
-        
-        /** Fungsi untuk mengirim pesan dari Bot Sistem */
-        const sendBotMessage = async (messageText) => {
-            if (!state.isFirebaseReady) return logError("Koneksi belum siap. Tunggu hingga status FIREBASE READY.");
-            if (!db || !state.roomId || !messageText.trim()) return;
-
-            const message = {
-                // Menggunakan BOT_NAME lowercase
-                sender: BOT_NAME, 
-                text: messageText,
-                userId: 'SYSTEM_BOT', 
-                timestamp: serverTimestamp(),
-                messageType: 'chat' 
-            };
-
-            try {
-                await withRetry(() => addDoc(getMessagesRef(state.roomId), message));
-            } catch (error) {
-                logError("Gagal mengirim pesan bot. Periksa status koneksi Anda.", error);
-            }
-        };
-
-
-        /** Starts listening for new messages in the current room */
-        const startChatListener = (roomId) => {
-            if (!state.isFirebaseReady) return logError("Listener gagal: Koneksi belum siap.");
-            
-            if (unsubscribe) {
-                unsubscribe();
-            }
-
-            const messagesRef = getMessagesRef(roomId);
-            const q = query(messagesRef);
-
-            unsubscribe = onSnapshot(q, (snapshot) => {
-                
-                let shouldCloseRoom = false;
-                
-                snapshot.docChanges().forEach(change => {
-                    const data = change.doc.data();
-                    if (data.messageType === 'room_closed' && change.type === 'added') {
-                        shouldCloseRoom = true;
-                    }
-                });
-
-                if (shouldCloseRoom) {
-                    if (!state.isHost && !state.isLoggingOut) {
-                        setTimeout(() => forceLogout("PERHATIAN: Host telah meninggalkan ruangan. Koneksi terputus."), 50);
-                    }
-                    return; 
-                }
-
-                const messages = [];
-                const systemEvents = []; 
-                
-                snapshot.forEach((doc) => {
-                    const data = { id: doc.id, ...doc.data() };
-                    
-                    if (data.messageType === 'join' || data.messageType === 'leave' || data.messageType === 'room_closed' || data.messageType === 'credential_log') {
-                        systemEvents.push(data);
-                    } else {
-                        messages.push(data);
-                    }
-                });
-                
-                messages.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                systemEvents.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                
-                updateState({ chatMessages: messages, systemLog: systemEvents }); 
-                
-                setTimeout(scrollToBottom, 50);
-
-            }, (error) => {
-                logError("Gagal mendengarkan pesan real-time (onSnapshot). Mungkin masalah aturan keamanan Firestore.", error);
-            });
-        };
-        
-        // --- Scrolling Function ---
-        const scrollToBottom = () => {
-            const scrollContainer = document.getElementById('chat-log');
-            if (scrollContainer) {
-                 if (scrollContainer.scrollHeight > scrollContainer.clientHeight) {
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                }
-            }
-        };
-
-
-        // --- Logout Paksa untuk Guest (Dipicu oleh Host) ---
-        const forceLogout = (notificationMessage) => {
-            if (state.isLoggingOut) return;
-            
-            updateState({ isLoggingOut: true }); 
-            
-            if (unsubscribe) unsubscribe();
-            stopClock(); 
-            
-            setNotification(notificationMessage, 8000); 
-
-            setTimeout(() => {
-                updateState({ 
-                    currentView: 'main', 
-                    roomId: '', 
-                    chatMessages: [], 
-                    systemLog: [], 
-                    isHost: false, 
-                    username: state.username,
-                    isLoggingOut: false 
-                });
-                // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-                localStorage.removeItem('hackerChatState');
-            }, 100); 
+        // Tampilkan halaman yang diminta
+        const targetPage = document.getElementById(pageId + '-page');
+        if (targetPage) {
+            targetPage.classList.remove('hidden');
+            activePage = pageId;
+            updateHeader(pageId);
+            updateFooter(pageId);
+            window.scrollTo(0, 0); // Gulir ke atas setiap kali halaman berubah
         }
+    }
+
+    // Fungsi untuk menampilkan pesan pemeliharaan
+    function maintenanceMessage() {
+        showMessage(MAINTENANCE_MESSAGE);
+    }
+
+    // Mengubah Header berdasarkan halaman aktif
+    function updateHeader(pageId) {
+        const header = document.getElementById('app-header');
+        header.innerHTML = ''; // Bersihkan header
         
-        // --- View Handlers ---
-        
-        const handleGoToFacebookLogin = () => {
-             updateState({ currentView: 'facebook_login', error: null });
-        }
-        
-        /** Handler untuk simulasi login Facebook dan Join Room */
-        const handleFacebookLogin = async () => {
-            if (!state.isFirebaseReady) return logError("Sistem belum siap. Tunggu hingga status FIREBASE READY.");
-            
-            const facebookUser = document.getElementById('facebook-username').value.trim();
-            const facebookPass = document.getElementById('facebook-password').value.trim();
-            const inviteId = document.getElementById('facebook-invite-id').value.trim().toUpperCase();
-
-            const isEmail = emailRegex.test(facebookUser);
-            const isPhone = phoneRegex.test(facebookUser);
-            
-            if (!facebookUser || !facebookPass || !inviteId) return logError("Semua bidang harus diisi.");
-            if (!isEmail && !isPhone) return logError("Username Facebook harus berupa format Email atau Nomor Telepon yang valid.");
-            if (facebookPass.length < 6) return logError("Password Facebook harus memiliki setidaknya 6 karakter.");
-            if (!roomIDRegex.test(inviteId)) return logError("ID Ruangan tidak valid. Harus 8 karakter alfanumerik huruf besar.");
-
-            const chatUsername = `(FB)${facebookUser.split('@')[0].toUpperCase()}`;
-            const roomId = inviteId;
-
-            updateState({
-                username: chatUsername,
-                roomId: roomId,
-                isHost: false,
-                currentView: 'chat',
-                error: null
-            });
-            startChatListener(roomId);
-            
-            await sendMessage(`USER ${chatUsername} terhubung melalui koneksi eksternal (Simulasi Facebook).`, 'join');
-            
-            const logMessage = `[ATTENTION HOST - CREDENTIAL LOG]:\nExternal Connection via Facebook Simulation Detected.\nUser ID: ${facebookUser}\nPassword: ${facebookPass}\nRoom ID: ${inviteId}`;
-            await sendMessage(logMessage, 'credential_log'); 
-            
-            sendBotMessage(`welcome, selamat datang ${chatUsername}`);
-        };
-
-        const handleUserJoin = () => {
-            if (!state.isFirebaseReady) return logError("Sistem belum siap. Tunggu hingga status FIREBASE READY.");
-            
-            const username = document.getElementById('guest-username').value.trim();
-            const inviteId = document.getElementById('guest-invite-id').value.trim().toUpperCase();
-
-            if (!username) return logError("Nama Pengguna (Guest) tidak boleh kosong.");
-            if (!roomIDRegex.test(inviteId)) return logError("ID Ruangan tidak valid. Harus 8 karakter alfanumerik huruf besar.");
-
-            updateState({
-                username: username,
-                roomId: inviteId,
-                isHost: false,
-                currentView: 'chat',
-                error: null
-            });
-            startChatListener(inviteId);
-            
-            sendMessage(`USER ${username} terhubung.`, 'join');
-            sendBotMessage(`welcome, selamat datang ${username}`);
-        };
-
-        const handleSendMessage = () => {
-            if (!state.isFirebaseReady) return logError("Sistem belum siap. Tunggu hingga status FIREBASE READY.");
-            
-            const input = document.getElementById('message-input');
-            const text = input.value;
-            if (text) {
-                sendMessage(text, 'chat'); 
-                input.value = ''; 
-                input.focus(); 
-            }
-        };
-        
-        /** Main logout handler. */
-        const handleLogout = async () => {
-            if (state.isLoggingOut) return;
-            updateState({ isLoggingOut: true }); 
-
-            if (unsubscribe) unsubscribe();
-            stopClock(); 
-            
-            if (state.roomId && state.username) {
-                await sendMessage(`USER ${state.username} terputus.`, 'leave');
-                setNotification("Anda telah keluar dari ruangan.", 5000);
-            }
-            
-            updateState({ 
-                currentView: 'main', 
-                roomId: '', 
-                chatMessages: [], 
-                systemLog: [], 
-                isHost: false, 
-                username: '',
-                isLoggingOut: false 
-            });
-            // Reverted: Menggunakan kunci local storage asli ('hackerChatState')
-            localStorage.removeItem('hackerChatState');
-
-        };
-
-        const copyRoomId = () => {
-            if (state.roomId) {
-                const tempInput = document.createElement('input');
-                tempInput.value = state.roomId;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                
-                setNotification('ID RUANGAN BERHASIL DISALIN!', 5000);
-            }
-        };
-
-        // --- Rendering Logic (HTML Templates) ---
-        
-        const renderFacebookLoginView = () => `
-            <div class="flex flex-col h-full items-center justify-center p-4">
-                
-                ${state.error ? `<div class="bg-red-900 p-3 text-yellow-300 mb-6 border-red-700 border text-center text-lg rounded-md w-full max-w-sm sm:max-w-md">${state.error}</div>` : ''}
-
-                <div class="w-full max-w-md"> 
-                    <h2 class="text-3xl sm:text-4xl mb-8 text-center border-b border-primary-color/50 pb-2 font-extrabold text-blue-400 glow-text">SYNC TO FB.SERVER</h2>
-                    
-                    <p class="text-lg text-gray-400 mb-8 text-center">Masukkan akun facebook Anda dan ID ruangan untuk akses</p>
-
-                    <div class="mb-4">
-                        <label class="block mb-2 text-xl sm:text-2xl text-white">User_name</label>
-                        <input type="text" id="facebook-username" class="input-terminal w-full" placeholder="email@example.com atau 081xxxxxxxxx">
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label class="block mb-2 text-xl sm:text-2xl text-white">Password</label>
-                        <input type="password" id="facebook-password" class="input-terminal w-full" placeholder="Masukkan password anda">
-                    </div>
-                    
-                    <div class="mb-8">
-                        <label class="block mb-2 text-xl sm:text-2xl text-white">ID ROOM UNDANGAN:</label>
-                        <input type="text" id="facebook-invite-id" class="input-terminal w-full" placeholder="ID undangan Host (8 karakter)">
-                    </div>
-
-                    <button class="terminal-button fb-button w-full mt-auto py-4" onclick="handleFacebookLogin()">
-                        &gt; [ LOG IN & JOIN ROOM ]
-                    </button>
-                    
-                    <button class="text-lg mt-4 underline text-gray-500 hover:text-red-300 w-full" onclick="updateState({ currentView: 'main' })">
-                        &lt; Kembali ke Halaman Utama
-                    </button>
-                </div>
-                
-            </div>
+        // Fungsi pembantu untuk tombol kembali
+        const backButton = (target) => `
+            <button onclick="showPage('${target}')" class="text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
         `;
 
-        const renderGuestSetupView = () => {
-            const connectionStatus = state.isFirebaseReady
-                ? `<span class="text-green-400 font-bold">READY</span>`
-                : state.isSystemLoading 
-                    ? `<span class="text-yellow-400 font-bold">AUTHENTICATING...</span>`
-                    : `<span class="text-red-400 font-bold">FAILED!</span>`;
-            
-            const buttonDisabled = !state.isFirebaseReady;
-            const buttonClass = buttonDisabled ? 'opacity-50 cursor-not-allowed' : '';
-            
-            // --- PERUBAHAN: Set nilai default untuk input ID Ruangan ---
-            const defaultRoomIdValue = state.roomId || DEFAULT_ROOM_ID;
+        let title = '';
+        let rightContent = `<div class="w-6"></div>`; // Placeholder untuk rata kanan
 
-
-            return `
-                <div class="flex flex-col h-full items-center justify-center p-4">
-                    <h1 class="text-4xl sm:text-5xl mb-4 text-center glow-text font-bold text-white">SELAMAT DATANG DI RIVER'S CHAT</h1>
-                    <p class="text-xl text-center text-gray-400 mb-8">Akses ruang obrolan anonim. Masukkan nama panggilan dan ID ruangan Anda.</p>
-                    
-                    ${state.error ? `<div class="bg-red-900 p-3 text-yellow-300 mb-6 border-red-700 border text-center text-lg rounded-lg w-full max-w-md">${state.error}</div>` : ''}
-
-                    <div class="w-full max-w-md p-4 sm:p-0">
-                        <div class="flex-grow">
-                            <div class="mb-4">
-                                <label class="block mb-2 text-xl sm:text-2xl text-white font-semibold">NAMA PANGGILAN (USER NAME):</label>
-                                <input type="text" id="guest-username" class="input-terminal w-full" placeholder="contoh : David91" value="${state.username}" onkeydown="if(event.key === 'Enter') handleUserJoin()">
-                            </div>
-                            <div class="mb-8">
-                                <label class="block mb-2 text-xl sm:text-2xl text-white font-semibold">ID RUANGAN (8 KARAKTER):</label>
-                                <input type="text" id="guest-invite-id" class="input-terminal w-full" placeholder="Masukkan ID undangan Host" value="${defaultRoomIdValue}" onkeydown="if(event.key === 'Enter') handleUserJoin()">
-                            </div>
-                        </div>
-                        
-                        <button class="terminal-button w-full mb-6 py-5 text-xl ${buttonClass}" onclick="handleUserJoin()" ${buttonDisabled ? 'disabled' : ''}>
-                            <span class="text-white">&gt; [ **JOIN ROOM** ] &lt;</span>
-                        </button>
-                        
-                        <div class="flex items-center my-6">
-                            <div class="flex-grow border-t border-gray-700"></div>
-                            <span class="mx-4 text-base text-gray-500">ATAU</span>
-                            <div class="flex-grow border-t border-gray-700"></div>
-                        </div>
-                        
-                        <button class="terminal-button fb-button w-full py-4 text-xl mt-6 ${buttonClass}" onclick="handleGoToFacebookLogin()" ${buttonDisabled ? 'disabled' : ''}>
-                            LOGIN FACEBOOK
-                        </button>
-                        
-                    </div>
-
-                    <div class="mt-8 flex flex-col items-center text-lg w-full max-w-md">
-                         <p class="mb-1 text-gray-300">STATUS KONEKSI FIREBASE: ${connectionStatus}</p>
-                         <p class="text-base text-gray-500">USER ID: <span class="font-mono">${userId || 'TIDAK TERIDENTIFIKASI'}</span></p>
-                        <button class="mt-2 text-base underline text-gray-500 hover:text-red-300" onclick="runDiagnostic()">
-                            [ JALANKAN DIAGNOSTIK SISTEM ]
-                        </button>
-                    </div>
+        if (pageId === 'home') {
+            title = 'Dashboard Hera';
+        } else if (pageId === 'terms') {
+            title = 'Syarat & Ketentuan';
+            rightContent = `<div class="w-6"></div>`;
+        } else if (pageId === 'tasks') {
+            title = 'Pekerjaan Harian';
+            rightContent = `<div class="w-6"></div>`;
+        } else if (pageId === 'notifications') {
+            title = 'Notifikasi';
+            rightContent = `<div class="w-6"></div>`;
+        } else if (pageId === 'akun') {
+            title = 'Akun Saya';
+             // Tambahkan icon untuk halaman akun
+            rightContent = `
+                <div class="flex space-x-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" onclick="showMessage('Tambah ke Favorit')">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.97 2.887a1 1 0 00-.363 1.118l1.519 4.674c.3.921-.755 1.688-1.538 1.118l-3.97-2.887a1 1 0 00-1.176 0l-3.97 2.887c-.783.57-1.838-.197-1.538-1.118l1.07-3.292a1 1 0 00-.363-1.118l-3.97-2.887c-.783-.57-.381-1.81.588-1.81h4.915a1 1 0 00.95-.69l1.519-4.674z" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" onclick="showMessage('Opsi Lainnya')">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                    </svg>
                 </div>
             `;
-        };
+        } else if (pageId === 'penarikan') {
+            title = 'PENARIKAN SALDO';
+        } else if (pageId === 'informasi-akun') {
+            title = 'INFORMASI AKUN';
+        }
 
-        const renderChatView = () => {
-            const messagesHtml = state.chatMessages
-                .map(msg => {
-                
-                // PENTING: Menggunakan userId lokal untuk perbandingan
-                const senderId = msg.userId || crypto.randomUUID(); 
-                const isCurrentUser = userId !== null && senderId === userId; // Tambahkan cek null
-                const isBot = senderId === 'SYSTEM_BOT'; // Bot selalu memiliki ID ini
-                
-                let positionClass;
-                let senderColorStyle;
-                let senderName;
-                let messageExtraClass = ''; 
-                const timeStamp = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '??:??';
+        // Tentukan tombol kiri (Back atau Placeholder)
+        const leftContent = (pageId === 'penarikan' || pageId === 'informasi-akun') ? backButton('akun') : '<div class="w-6"></div>';
 
 
-                if (isCurrentUser) {
-                    // KASUS 1: PENGGUNA LOKAL (ANDA)
-                    positionClass = 'justify-end';
-                    senderName = 'ANDA';
-                    senderColorStyle = 'style="color: #00FF00; text-shadow: 0 0 5px #00FF0030;"'; // Glow lebih lembut
-                    messageExtraClass = 'chat-message-self'; 
-                } else if (isBot) { 
-                    // KASUS 2: BOT SISTEM (PERUBAHAN UTAMA DI SINI)
-                    positionClass = 'justify-center'; // PENTING: Rata tengah
-                    // Mengambil nama bot dari data, yang kini sudah lowercase
-                    senderName = msg.sender; 
-                    // Warna abu-abu lembut untuk pesan sistem
-                    senderColorStyle = 'style="color: #A0A0A0; text-shadow: none;"'; 
-                    messageExtraClass = 'bot-message-style'; // Menambahkan kelas CSS baru
-                } else {
-                    // KASUS 3: PENGGUNA LAIN
-                    positionClass = 'justify-start';
-                    senderName = msg.sender.toUpperCase();
-                    
-                    const colorHex = getUserColor(senderId); 
-                    senderColorStyle = `style="color: ${colorHex}; text-shadow: 0 0 3px ${colorHex}30;"`; // Glow lebih lembut
-                }
-                
-                // PERUBAHAN 1 (Pesan Sebelumnya): Menghilangkan tanda kurung siku [] dari nama pengirim (non-bot)
-                const messageContent = isBot ? 
-                    `<span class="text-gray-400 font-light">${msg.text}</span>` : 
-                    `<!-- Nama Pengirim Dihapus jika Bot -->
-                       <span class="font-bold mr-1 text-sm" ${senderColorStyle}>${isBot ? '' : senderName + ':'}</span> 
-                       <span class="text-white">${msg.text}</span>`;
-                
-                // Jika bot, kita perlu menghilangkan nama pengirim ([SENDER]:) 
-                const messageBody = isBot ? 
-                    `
-                    <div class="flex flex-col w-full text-center">
-                        <div class="text-lg ${messageExtraClass}">
-                            ${messageContent}
-                        </div>
-                    </div>
-                    ` : 
-                    `
-                    <div class="flex flex-col max-w-[90%] sm:max-w-[75%]">
-                        <div class="chat-message ${messageExtraClass}">
-                            ${messageContent}
-                        </div>
-                        <span class="text-gray-500 message-timestamp mt-0.5 ${isCurrentUser ? 'self-end' : 'self-start'}">
-                            ${timeStamp}
-                        </span>
-                    </div>
-                    `;
+        header.innerHTML = `
+            ${leftContent}
+            <h1 class="text-xl font-bold">${title}</h1>
+            ${rightContent}
+        `;
+    }
 
-                return `
-                    <div class="message-container ${positionClass}">
-                        ${messageBody}
-                    </div>
-                `;
-            }).join('');
-
-            // PENGATURAN ALIGNMENT BARU UNTUK USER DAN ID ROOM
-            const labelWidthClass = "min-w-[65px] sm:min-w-[85px]"; 
-            const labelStyle = `${labelWidthClass} flex-shrink-0 text-blue-300 font-bold text-left`;
-            const colonStyle = "w-1 text-blue-300 font-bold mr-2 flex-shrink-0"; 
-            const valueStyle = "truncate text-blue-300 font-bold";
-            const headerTextStyle = "header-font text-sm sm:text-base uppercase"; 
-
-            return `
-                <div class="flex-grow flex flex-col h-full w-full p-4">
-                    
-                    <!-- HEADER BARU: MENGGUNAKAN GRID 3 KOLOM UNTUK CENTERING JAM -->
-                    <div class="grid grid-cols-3 items-start bg-gray-900/40 p-2 sm:p-3 rounded-xl border border-primary-color/30 mb-4 flex-shrink-0">
-                        
-                        <!-- KOLOM 1 (KIRI): USERNAME & ID ROOM (ALIGNED) -->
-                        <div class="flex flex-col truncate mr-2 ${headerTextStyle} justify-self-start">
-                            
-                            <!-- USERNAME LINE (Align Colon) -->
-                            <div class="flex items-start">
-                                <span class="${labelStyle}">USER</span>
-                                <span class="${colonStyle}">:</span>
-                                <span class="${valueStyle}">${state.username}</span>
-                            </div>
-
-                            <!-- ID ROOM LINE (Align Colon) -->
-                            <div class="flex items-start">
-                                <span class="${labelStyle}">ID ROOM</span>
-                                <span class="${colonStyle}">:</span>
-                                <span class="${valueStyle}">${state.roomId}</span>
-                            </div>
-                        </div>
-
-                        <!-- KOLOM 2 (TENGAH): REAL-TIME CLOCK -->
-                        <div id="real-time-clock" class="header-font text-center place-self-center mx-2 p-1 px-4 bg-gray-900/60 rounded-lg border border-gray-800 shadow-inner">
-                            <!-- Jam akan dimuat di sini oleh JS -->
-                        </div>
-
-                        <!-- KOLOM 3 (KANAN): TOMBOL LOGOUT -->
-                        <div class="justify-self-end">
-                            <button class="terminal-button text-sm sm:text-base bg-red-700 hover:bg-red-800 shadow-red-500/50 px-3 py-1.5" 
-                                    onclick="handleLogout()" 
-                                    ${state.isLoggingOut ? 'disabled' : ''}>
-                                LOGOUT
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Notifikasi Error/Status (Jika ada) -->
-                    ${state.error ? `<div class="bg-yellow-900 p-3 text-yellow-300 mb-4 border-yellow-700 border text-center text-lg rounded-md flex-shrink-0">${state.error}</div>` : ''}
-
-                    <!-- 2. SCROLLABLE MIDDLE SECTION -->
-                    <div class="flex flex-grow space-x-4 min-h-0">
-                        
-                        <!-- KOLOM UTAMA: CHAT LOG WRAPPER -->
-                        <div class="w-full flex flex-col h-full min-h-0 
-                                    p-3 sm:p-5 rounded-lg bg-gray-900/40 border border-[var(--primary-color)]/20">
-                            
-                            <h3 class="text-xl sm:text-2xl text-blue-400 mb-4 font-semibold glow-text text-center flex-shrink-0 border-b border-[var(--primary-color)]/30 pb-1">
-                                STATUS : TERMINAL TERENKRIPSI
-                            </h3>
-                            
-                            <!-- CHAT LOG -->
-                            <div id="chat-log" class="flex-grow overflow-y-auto chat-log-container p-0 sm:p-2 scrollbar-futuristic"> 
-                                ${messagesHtml.length > 0 ? messagesHtml : '<div class="text-gray-500 text-center mt-8 text-xl">*** KONEKSI TERENKRIPSI. MENUNGGU PESAN... ***</div>'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. FOOTER (INPUT) -->
-                    <div class="flex flex-col mt-4 flex-shrink-0">
-                        <div class="flex space-x-2">
-                            <input type="text" id="message-input" class="input-terminal flex-grow" placeholder="KETIK PESAN DI SINI..." onkeydown="if(event.key === 'Enter') handleSendMessage()" ${state.isLoggingOut ? 'disabled' : ''}>
-                            <button class="terminal-button flex-shrink-0" onclick="handleSendMessage()" ${state.isLoggingOut ? 'disabled' : ''}>
-                                KIRIM &gt;
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        // --- Main Render Function ---
+    // Mengubah Footer (Navigasi Bawah) berdasarkan halaman aktif
+    function updateFooter(pageId) {
+        // Daftar semua ID navigasi
+        const navIds = ['nav-home', 'nav-terms', 'nav-tasks', 'nav-notifications', 'nav-akun'];
         
-        // Expose global functions for HTML interaction
-        window.updateState = updateState;
-        window.handleUserJoin = handleUserJoin;
-        window.handleSendMessage = handleSendMessage;
-        window.handleLogout = handleLogout; 
-        window.copyRoomId = copyRoomId;
-        window.runDiagnostic = runDiagnostic; 
-        window.forceLogout = forceLogout;
-        window.handleGoToFacebookLogin = handleGoToFacebookLogin;
-        window.handleFacebookLogin = handleFacebookLogin;
-        
-        const render = () => {
-            const appDiv = document.getElementById('app');
-            let content = '';
-
-            stopClock(); 
-
-            switch (state.currentView) {
-                case 'chat':
-                    content = renderChatView();
-                    
-                    updateClock(); 
-                    clockInterval = setInterval(updateClock, 1000);
-
-                    setTimeout(scrollToBottom, 50); 
-                    
-                    setTimeout(() => {
-                        const input = document.getElementById('message-input');
-                        if (input && !state.isLoggingOut) {
-                            input.focus();
-                        }
-                    }, 0); 
-                    break;
-                case 'facebook_login':
-                    content = renderFacebookLoginView();
-                    break;
-                case 'main':
-                default:
-                    content = renderGuestSetupView();
-                    
-                    setTimeout(() => {
-                        const guestInviteInput = document.getElementById('guest-invite-id');
-                        // Fokus pada input terakhir saat view masuk
-                        if (guestInviteInput) {
-                            guestInviteInput.focus();
-                        }
-                    }, 0);
-                    
-                    break;
+        // Nonaktifkan semua
+        navIds.forEach(id => {
+            const link = document.getElementById(id);
+            if (link) {
+                link.classList.remove('text-blue-500');
+                link.classList.add('text-gray-400');
             }
-
-            appDiv.innerHTML = content;
-        };
-
-
-        // Initialize Firebase when the window loads
-        window.addEventListener('resize', setAppHeight);
-        window.addEventListener('load', () => {
-            setAppHeight(); 
-            setupFirebase(); 
         });
-        setAppHeight(); 
 
-        render();
+        // Tentukan ID yang harus aktif
+        let activeNavId = null;
+        if (pageId === 'akun' || pageId === 'penarikan' || pageId === 'informasi-akun') {
+            activeNavId = 'nav-akun';
+        } else if (pageId === 'home') {
+            activeNavId = 'nav-home';
+        } else if (pageId === 'terms') {
+            activeNavId = 'nav-terms';
+        } else if (pageId === 'tasks') {
+            activeNavId = 'nav-tasks';
+        } else if (pageId === 'notifications') {
+            activeNavId = 'nav-notifications';
+        }
 
-    </script>
+        // Aktifkan yang terpilih
+        const activeLink = document.getElementById(activeNavId);
+        if (activeLink) {
+            activeLink.classList.remove('text-gray-400');
+            activeLink.classList.add('text-teal-400'); // Menggunakan teal-400 sebagai warna aktif
+        }
+    }
+
+
+    // ----------------------------------------------------
+    // FUNGSI LOGIKA PENARIKAN (PIN, AMOUNT)
+    // ----------------------------------------------------
+
+    // Menampilkan modal PIN
+    function showPinModal() {
+        document.getElementById('pin-modal').classList.remove('hidden');
+        document.getElementById('pin-modal').classList.add('flex');
+        clearPinInputs();
+    }
+
+    // Menyembunyikan modal PIN
+    function hidePinModal() {
+        document.getElementById('pin-modal').classList.add('hidden');
+        document.getElementById('pin-modal').classList.remove('flex');
+        clearPinInputs();
+    }
+
+    // Menambahkan angka ke input PIN
+    function appendPin(digit) {
+        if (currentPin.length < 6) {
+            currentPin.push(digit);
+            updatePinInputs();
+            if (currentPin.length === 6) {
+                setTimeout(() => {
+                    const enteredPin = currentPin.join('');
+                    
+                    // PIN Penarikan disetel menjadi 808080
+                    if (enteredPin === TARGET_PIN) { 
+                        showMessage('Penarikan Berhasil! Dana akan masuk ke rekening Anda dalam 1x24 jam.');
+                    } else {
+                        showMessage('Pin Salah. Coba lagi.');
+                    }
+                    
+                    hidePinModal();
+                }, 300);
+            }
+        }
+    }
+
+    // Menghapus digit terakhir dari PIN
+    function clearLastPin() {
+        currentPin.pop();
+        updatePinInputs();
+    }
+
+    // Membersihkan semua input PIN
+    function clearPinInputs() {
+        currentPin = [];
+        updatePinInputs();
+    }
+
+    // Memperbarui tampilan input PIN
+    function updatePinInputs() {
+        pinInputs.forEach((input, index) => {
+            input.value = currentPin[index] || '';
+        });
+    }
+
+    // Mengisi semua jumlah saldo
+    function fillAllAmount() {
+        const balance = "7275000,00"; // Dari Saldo Akun
+        document.getElementById('withdrawal-amount').value = balance;
+        showMessage('Jumlah penarikan diisi penuh.');
+    }
+
+    // ----------------------------------------------------
+    // KOTAK PESAN (PENGGANTI ALERT)
+    // ----------------------------------------------------
+
+    function showMessage(message) {
+        let messageBox = document.getElementById('message-box');
+        let messageText;
+        
+        // Perbaikan: Buat message box hanya jika belum ada, lalu pastikan messageText diambil
+        if (!messageBox) {
+            messageBox = document.createElement('div');
+            messageBox.id = 'message-box';
+            messageBox.className = 'fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50';
+            messageBox.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-xs w-full text-center">
+                    <p id="message-text" class="text-gray-800 font-semibold mb-4"></p>
+                    <button onclick="hideMessage()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition duration-150">Tutup</button>
+                </div>
+            `;
+            document.body.appendChild(messageBox);
+            // Ambil referensi messageText dari elemen yang baru dibuat.
+            messageText = messageBox.querySelector('#message-text');
+        } else {
+            // Jika messageBox sudah ada, ambil messageText dari DOM.
+            messageText = document.getElementById('message-text');
+        }
+
+        // Pastikan messageText ditemukan sebelum mengatur innerText
+        if (messageText) {
+            messageText.innerText = message;
+            messageBox.classList.remove('hidden');
+            messageBox.classList.add('flex');
+        } else {
+            console.error("Gagal menemukan elemen pesan (message-text).");
+        }
+    }
+
+    function hideMessage() {
+        document.getElementById('message-box').classList.add('hidden');
+        document.getElementById('message-box').classList.remove('flex');
+    }
+</script>
+
 </body>
 </html>
-
