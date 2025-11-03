@@ -153,7 +153,7 @@
 <body>
 
     <div id="app" class="chat-container">
-        <!-- Content will be injected here by JavaScript -->
+        <!-- Konten akan disuntikkan di sini oleh JavaScript -->
     </div>
 
     <!-- Firebase Imports -->
@@ -211,7 +211,7 @@
         // --- App State ---
         let state = {
             currentView: 'loading', 
-            username: 'Customer-ID', // Nilai default diperbarui
+            username: 'Customer-ID', 
             roomId: PUBLIC_ROOM_ID, 
             chatMessages: [],
             isFirebaseReady: false, 
@@ -319,20 +319,20 @@
                  return logError("Otentikasi Gagal: Tidak dapat memperoleh User ID.");
             }
 
-            // --- PENTING: SETEL NAMA PENGGUNA (Ganti Anon- menjadi Customer-) ---
+            // --- PENTING: SETEL NAMA PENGGUNA (Customer-) ---
             const shortId = userId.substring(0, 4).toUpperCase();
-            const anonUsername = `Customer-${shortId}`; 
+            const customerUsername = `Customer-${shortId}`; 
 
             updateState({ 
                 isFirebaseReady: true, 
                 loading: false, 
-                username: anonUsername,
+                username: customerUsername,
                 currentView: 'chat' 
             });
             
             startChatListener(PUBLIC_ROOM_ID);
             
-            console.log(`[FIREBASE READY] User ID: ${userId}, Username: ${anonUsername}`);
+            console.log(`[FIREBASE READY] User ID: ${userId}, Username: ${customerUsername}`);
             
             // Kirim pesan sambutan BOT (hanya jika pesan pertama)
             if (state.chatMessages.length === 0) {
@@ -340,7 +340,7 @@
                  setTimeout(() => {
                     // Cek lagi setelah 1 detik
                     if (state.chatMessages.length === 0) {
-                        sendBotMessage(`Halo! Selamat datang di Saluran Pelayanan Pelanggan. Ada yang bisa kami bantu, ${anonUsername}?`);
+                        sendBotMessage(`Halo! Selamat datang di Saluran Pelayanan Pelanggan. Ada yang bisa kami bantu, ${customerUsername}?`);
                     }
                  }, 1000);
             }
@@ -438,20 +438,46 @@
         
         // --- View Handlers ---
         
-        const handleSendMessage = () => {
+        const handleSendMessage = (event) => { // Menerima event untuk preventDefault
             const input = document.getElementById('message-input');
-            const text = input.value;
-            if (text) {
-                sendMessage(text, 'chat'); 
-                input.value = ''; 
-                input.focus(); 
+            const text = input.value.trim();
+            if (!text) return;
+            
+            // --- LOGIC KODE RAHASIA ---
+            if (text === '%%admin%%') {
+                input.value = '';
+                
+                const newAdminName = "Admin G Invest";
+
+                if (state.username === newAdminName) {
+                    setNotification("Anda sudah menjadi Admin G Invest.", 3000);
+                    return;
+                }
+
+                const oldUsername = state.username;
+                
+                // 1. Update state (username)
+                updateState({ username: newAdminName });
+                
+                // 2. Send system announcement ke semua user
+                sendBotMessage(`[Pemberitahuan] Akun ${oldUsername} kini telah diidentifikasi sebagai **${newAdminName}**.`);
+                
+                // 3. Notifikasi pribadi
+                setNotification(`Selamat! Nama Anda telah diperbarui menjadi ${newAdminName}.`, 5000);
+                return; // Berhenti tanpa mengirim kode sebagai pesan chat
             }
+            // --- AKHIR LOGIC KODE RAHASIA ---
+
+            // Logic kirim pesan normal
+            sendMessage(text, 'chat'); 
+            input.value = ''; 
+            input.focus(); 
         };
         
         const handleInputKeypress = (event) => {
              // Cek jika tombol yang ditekan adalah Enter
             if (event.key === 'Enter') {
-                handleSendMessage();
+                handleSendMessage(event); // Kirim event ke handleSendMessage
                 event.preventDefault(); 
             }
         };
@@ -505,16 +531,26 @@
                     senderStyle = 'font-bold text-accent-green';
                     nameHtml = `<div class="sender-name-other" style="color: var(--accent-color);">${senderNameDisplay}</div>`;
                 } else if (!isCurrentUser) {
-                    // Pengguna lain (Customer/Pelanggan)
+                    // Pengguna lain (Customer/Pelanggan/Admin Lain)
                     const colorHex = getUserColor(senderId); 
                     senderNameDisplay = msg.sender;
                     // Terapkan warna unik ke nama pengirim lain
-                    nameHtml = `<div class="sender-name-other" style="color: ${colorHex};">${senderNameDisplay}</div>`;
+                    
+                    // Jika pengirim lain adalah Admin, gunakan warna yang berbeda
+                    const isOtherAdmin = senderNameDisplay.startsWith('Admin G Invest');
+                    const adminColor = isOtherAdmin ? '#8B0000' : colorHex; // Dark Red untuk Admin lain
+                    const adminIcon = isOtherAdmin ? '<i data-lucide="shield-check" class="w-3 h-3 inline-block align-text-top mr-0.5"></i>' : '';
+
+                    nameHtml = `<div class="sender-name-other" style="color: ${adminColor};">${adminIcon} ${senderNameDisplay}</div>`;
                 } else {
-                    // Pengguna saat ini
+                    // Pengguna saat ini (diri sendiri, mungkin Admin)
+                    const isSelfAdmin = state.username.startsWith('Admin G Invest');
+                    const selfColor = isSelfAdmin ? 'text-red-600' : 'text-gray-400';
+                    const selfIcon = isSelfAdmin ? '<i data-lucide="shield-check" class="w-3 h-3 inline-block align-text-top mr-0.5"></i>' : '';
+                    
                     senderNameDisplay = `Anda (${state.username})`;
                     // Nama untuk diri sendiri diletakkan di atas bubble
-                    nameHtml = `<div class="text-xs text-gray-400 mb-1 px-1 font-medium">${senderNameDisplay}</div>`;
+                    nameHtml = `<div class="text-xs ${selfColor} mb-1 px-1 font-medium">${selfIcon} ${state.username}</div>`;
                 }
 
                 const timeStamp = msg.timestamp ? new Date(msg.timestamp.seconds * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '??:??';
@@ -526,9 +562,8 @@
                 return `
                     <div class="flex ${isCurrentUser ? 'justify-end' : 'justify-start'} w-full">
                         <div class="flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}">
-                            <!-- Nama Pengirim (di atas bubble, kecuali jika BOT/Lain) -->
-                            ${isCurrentUser ? nameHtml : ''}
-                            ${!isCurrentUser && !isBot ? nameHtml : ''} 
+                            <!-- Nama Pengirim (di atas bubble, kecuali jika BOT) -->
+                            ${nameHtml} 
                             
                             <div class="message-bubble ${messageClass}">
                                 ${msg.text}
@@ -552,7 +587,7 @@
                     </div>
 
                     <div class="p-2 border-b border-gray-100 bg-gray-50 text-xs text-center text-gray-600 flex-shrink-0">
-                        Anda terhubung sebagai <span class="font-semibold text-primary-blue">${state.username}</span> di Saluran Publik.
+                        Anda terhubung sebagai <span class="font-semibold ${state.username.startsWith('Admin') ? 'text-red-600' : 'text-primary-blue'}">${state.username}</span> di Saluran Publik.
                     </div>
 
                     <!-- Notifikasi Error/Status (Jika ada) -->
