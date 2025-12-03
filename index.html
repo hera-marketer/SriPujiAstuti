@@ -2,881 +2,551 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>wondr by BNI</title>
-    
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel untuk compile JSX di browser -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investasi Saham GIAA</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Noto Sans (Opsional, agar lebih mirip) -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Noto Sans', sans-serif;
-            background-color: #e5e7eb;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
+        .header-gradient { background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06); }
+        .price-up { color: #16a34a; transition: color 0.3s; }
+        .price-down { color: #dc2626; transition: color 0.3s; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Chat Styles */
+        #messages-container::-webkit-scrollbar { width: 6px; }
+        #messages-container::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 3px; }
+        #messages-container::-webkit-scrollbar-track { background: #f1f5f9; }
+        .my-message { border-radius: 12px 12px 0 12px; }
+        .other-message { border-radius: 12px 12px 12px 0; }
+        
+        /* Pop Up & Animations */
+        .fade-in-up { animation: fadeInUp 0.3s ease-out forwards; }
+        .fade-out-down { animation: fadeOutDown 0.3s ease-in forwards; }
+        
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translate(-50%, -40%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
         }
-        /* Hide scrollbar for Chrome, Safari and Opera */
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
+        @keyframes fadeOutDown {
+            from { opacity: 1; transform: translate(-50%, -50%); }
+            to { opacity: 0; transform: translate(-50%, -40%); }
         }
-        /* Hide scrollbar for IE, Edge and Firefox */
-        .no-scrollbar {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-        .animate-spin-slow {
-            animation: spin 3s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+
+        /* Input Styles - High Contrast */
+        .input-user {
+            @apply w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-900 font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition;
         }
     </style>
 </head>
-<body>
-    <div id="root"></div>
+<body class="p-4 sm:p-6 relative min-h-screen">
+    <!-- Loading -->
+    <div id="transitionOverlay" class="fixed inset-0 bg-white/90 hidden flex items-center justify-center z-[600] opacity-0 transition-opacity duration-300">
+        <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mb-4"></div>
+            <p class="text-lg font-semibold text-blue-700" id="loadingText">Menghubungkan ke Server...</p>
+        </div>
+    </div>
+    
+    <!-- Temporary Transaction Popup -->
+    <div id="tempTransactionPopup" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black/80 text-white px-6 py-4 rounded-xl shadow-2xl z-[2000] hidden flex-col items-center justify-center text-center min-w-[200px]">
+        <div class="w-10 h-10 mb-2 rounded-full bg-green-500 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        </div>
+        <p class="font-semibold text-sm">Transaksi sedang diproses</p>
+    </div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+    <div id="app" class="max-w-4xl mx-auto pb-24"> 
+        <header class="header-gradient p-5 rounded-xl mb-6 flex justify-between items-center">
+            <div><h1 class="text-3xl font-bold">Garuda Invest Pro (G-Invest)</h1><p class="text-sm font-light opacity-80">Platform Trading & Investasi Saham</p></div>
+            <button id="auth-status-button" class="py-2 px-4 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-lg transition duration-200"><span id="auth-status-text">Log In</span></button>
+        </header>
 
-        // --- ICONS (SVG Manual agar tidak perlu dependency luar yang ribet) ---
-        const Icon = ({ children, className, ...props }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
-                {children}
-            </svg>
-        );
-
-        const Bell = (props) => <Icon {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></Icon>;
-        const ReceiptText = (props) => <Icon {...props}><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></Icon>;
-        const Eye = (props) => <Icon {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></Icon>;
-        const EyeOff = (props) => <Icon {...props}><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></Icon>;
-        const Send = (props) => <Icon {...props}><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></Icon>;
-        const CreditCard = (props) => <Icon {...props}><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></Icon>;
-        const FileText = (props) => <Icon {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></Icon>;
-        const Wallet = (props) => <Icon {...props}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></Icon>;
-        const Smartphone = (props) => <Icon {...props}><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></Icon>;
-        const Globe = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></Icon>;
-        const ShoppingBag = (props) => <Icon {...props}><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></Icon>;
-        const Grid = (props) => <Icon {...props}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></Icon>;
-        const ScanBarcode = (props) => <Icon {...props}><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="14" height="10" x="5" y="7" rx="2"/></Icon>;
-        const LogOut = (props) => <Icon {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></Icon>;
-        const Fingerprint = (props) => <Icon {...props}><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 .95-.07 1.43"/><path d="M14 20c.4 0 .73-.2.81-.5.5-1.87 1.5-2.25 2.19-4.5"/><path d="M16 5a6 6 0 0 0-6 6c0 1.89.62 2.9 1.69 3.9"/><path d="M18.82 8.76a4.48 4.48 0 0 1-.36 4.48c-.62.83-1.42 1.33-2.19 2.48"/><path d="M20.66 11.3c.4 1.94.3 3.85-.56 5.7H22a9.98 9.98 0 0 0 0-14.7"/></Icon>;
-        const ChevronRight = (props) => <Icon {...props}><path d="m9 18 6-6-6-6"/></Icon>;
-        const ArrowRight = (props) => <Icon {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></Icon>;
-        const ArrowLeft = (props) => <Icon {...props}><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></Icon>;
-        const UserPlus = (props) => <Icon {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></Icon>;
-        const Users = (props) => <Icon {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
-        const Repeat = (props) => <Icon {...props}><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></Icon>;
-        const PackageOpen = (props) => <Icon {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></Icon>;
-        const CheckCircle2 = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>;
-        const XCircle = (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></Icon>;
-        const Banknote = (props) => <Icon {...props}><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></Icon>;
-        const Share2 = (props) => <Icon {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></Icon>;
-        const Check = (props) => <Icon {...props}><path d="M20 6 9 17l-5-5"/></Icon>;
-        const Landmark = (props) => <Icon {...props}><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></Icon>;
-        const Delete = (props) => <Icon {...props}><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" x2="12" y1="9" y2="15"/><line x1="12" x2="18" y1="9" y2="15"/></Icon>;
-
-        // --- Komponen Aset Logo & Grafis Sederhana ---
-        const WondrLogo = ({ size = "text-5xl", light = false }) => (
-            <div className={`font-bold tracking-tighter flex flex-col items-center justify-center ${size} ${light ? 'text-white' : 'text-[#ff6600]'}`}>
-                <div className="relative">
-                    <span>wondr</span>
-                    <div className="absolute bottom-1 left-[32%] w-[25%] h-[4px] bg-[#2dd4bf] rounded-full"></div>
-                </div>
-                <span className={`text-xs font-medium tracking-normal mt-0 ${light ? 'text-white' : 'text-gray-500'}`}>by BNI</span>
+        <!-- Login Modal -->
+        <div id="loginModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center p-4 z-[1000]">
+            <div id="loginModalContent" class="bg-white p-8 rounded-xl max-w-sm w-full card-shadow text-center" onclick="event.stopPropagation()">
+                <h3 class="text-2xl font-bold mb-6 text-blue-700">Masuk ke G-Invest</h3>
+                <p class="text-sm text-gray-500 mb-4">Gunakan Nomor HP dan Password Anda.</p>
+                <form id="loginForm">
+                    <div class="mb-4"><input type="text" id="loginPhone" placeholder="Nomor HP (e.g. 0812...)" class="input-user" required></div>
+                    <div class="mb-6"><input type="password" id="loginPassword" placeholder="Password" class="input-user" required></div>
+                    <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition duration-200 shadow-lg">Login</button>
+                </form>
             </div>
-        );
+        </div>
 
-        // --- Ilustrasi Kotak dengan Jaring Laba-laba (Custom SVG) ---
-        const EmptyBoxIllustration = () => (
-            <div className="relative w-40 h-32 flex items-center justify-center">
-                <div className="absolute inset-0 bg-teal-300 rounded-xl transform rotate-1 scale-90 opacity-20"></div>
-                <div className="absolute inset-0 bg-[#5eead4] rounded-xl flex items-center justify-center z-10">
-                    <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 40 L50 55 L80 40 L50 25 L20 40" fill="#f97316" stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-                        <path d="M20 40 V70 L50 85 V55 M80 40 V70 L50 85" fill="#ea580c" stroke="black" strokeWidth="2" strokeLinejoin="round"/>
-                        <path d="M50 55 V85" stroke="black" strokeWidth="2"/>
-                        <path d="M20 40 L10 25" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M80 40 L90 25" stroke="black" strokeWidth="2" strokeLinecap="round"/>
-                        <path d="M50 25 L50 55" stroke="white" strokeWidth="1"/>
-                        <path d="M50 40 L40 50 M50 40 L60 50" stroke="white" strokeWidth="1"/>
-                        <circle cx="50" cy="45" r="5" stroke="white" strokeWidth="1"/>
-                    </svg>
-                </div>
+        <!-- Registration Modal -->
+        <div id="registerModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center p-4 z-[1000] hidden">
+            <div class="bg-white p-8 rounded-xl max-w-md w-full card-shadow text-center" onclick="event.stopPropagation()">
+                <h3 class="text-2xl font-bold mb-2 text-green-600">Pengguna Baru Terdeteksi</h3>
+                <p class="text-sm text-gray-500 mb-6">Nomor HP ini belum terdaftar. Dapatkan <span class="font-bold text-blue-600">1000 Lot Gratis</span> (Akun Trial).</p>
+                <form id="registerForm">
+                    <div class="mb-4 text-left"><label class="block text-xs font-bold text-gray-600 mb-1">Nama Lengkap</label><input type="text" id="regName" class="input-user" required></div>
+                    <div class="mb-4 text-left"><label class="block text-xs font-bold text-gray-600 mb-1">Nama Bank</label><select id="regBank" class="input-user" required><option value="BCA">BCA</option><option value="BRI">BRI</option><option value="BNI">BNI</option><option value="MANDIRI">MANDIRI</option><option value="LAINNYA">LAINNYA</option></select></div>
+                    <div class="mb-6 text-left"><label class="block text-xs font-bold text-gray-600 mb-1">Nomor Rekening</label><input type="number" id="regAccountNum" class="input-user" required></div>
+                    <button type="submit" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition duration-200 shadow-lg">Buat Akun Trial</button>
+                    <button type="button" id="cancelRegisterBtn" class="mt-3 w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold rounded-lg transition">Batal</button>
+                </form>
             </div>
-        );
-
-        // --- Ilustrasi Sukses 3D Style (Shopping/Gift Theme) ---
-        const SuccessIllustration = () => (
-            <div className="relative w-48 h-40 flex items-center justify-center mb-4">
-                <svg width="200" height="160" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="100" cy="80" r="70" fill="#ecfdf5" />
-                    <rect x="70" y="50" width="60" height="70" rx="4" fill="#2dd4bf" />
-                    <path d="M70 50 H130 L125 120 H75 L70 50Z" fill="#14b8a6" />
-                    <path d="M85 50 V40 C85 32 92 32 100 32 C108 32 115 32 115 40 V50" stroke="#0f766e" strokeWidth="3" strokeLinecap="round" />
-                    <rect x="110" y="90" width="40" height="35" rx="2" fill="#fb923c" stroke="white" strokeWidth="2" />
-                    <path d="M110 90 L150 90 L145 125 H115 L110 90Z" fill="#f97316" />
-                    <path d="M130 90 V125" stroke="#fff" strokeWidth="1" opacity="0.5"/>
-                    <path d="M40 40 L70 50 L40 60 L45 50 L40 40Z" fill="#ef4444" transform="rotate(-15 40 40)" />
-                    <path d="M45 50 L180 80" stroke="white" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" pathLength="1" opacity="0.6">
-                        <animate attributeName="stroke-dashoffset" from="1" to="0" dur="1s" repeatCount="indefinite"/>
-                    </path>
-                    <circle cx="150" cy="110" r="18" fill="#00cc88" stroke="white" strokeWidth="3" />
-                    <path d="M142 110 L147 115 L158 104" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-            </div>
-        );
-
-        // --- Halaman 1: Splash Screen ---
-        const SplashScreen = ({ onFinish }) => {
-            useEffect(() => {
-                const timer = setTimeout(() => {
-                    onFinish();
-                }, 3000);
-                return () => clearTimeout(timer);
-            }, [onFinish]);
-
-            return (
-                <div className="h-full w-full bg-[#ff6600] relative flex flex-col items-center justify-center overflow-hidden font-sans">
-                    <div className="absolute -top-20 -left-20 w-64 h-64 bg-[#f0abfc] rounded-full opacity-100 z-0"></div>
-                    <div className="absolute -top-10 right-0 w-80 h-80 bg-[#d9f99d] rounded-full rounded-tr-none transform translate-x-20 -translate-y-20 z-0"></div>
-                    <div className="z-10 animate-pulse">
-                        <WondrLogo size="text-7xl" light={true} />
-                    </div>
-                    <div className="absolute bottom-0 left-0 w-full h-1/3 bg-[#2dd4bf] rounded-tr-[100px] z-0 transform translate-y-20"></div>
-                    <div className="absolute bottom-0 right-0 w-2/3 h-1/4 bg-[#a78bfa] rounded-tl-[100px] z-0 transform translate-y-10"></div>
-                    <div className="absolute bottom-8 px-8 text-center text-xs text-teal-900/60 z-20 font-medium leading-relaxed">
-                        PT Bank Negara Indonesia (Persero) Tbk berizin dan diawasi oleh Otoritas Jasa Keuangan (OJK) & Bank Indonesia (BI) serta merupakan peserta penjaminan Lembaga Penjamin Simpanan (LPS).
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman 2: Login Page ---
-        const LoginPage = ({ onLogin }) => {
-            return (
-                <div className="h-full w-full bg-white relative flex flex-col justify-between font-sans">
-                    <div className="flex-1 flex flex-col items-center justify-center mt-20">
-                        <WondrLogo size="text-6xl" />
-                    </div>
-                    <div className="px-8 pb-8">
-                        <div className="flex justify-between items-start mb-10 px-2">
-                            <div className="flex flex-col items-center gap-2 w-1/4">
-                                <div className="w-14 h-14 bg-[#5eead4] rounded-2xl flex items-center justify-center shadow-sm">
-                                    <Wallet className="text-teal-900" size={24} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800 text-center">E-Wallet</span>
+        </div>
+        
+        <!-- Main Content -->
+        <div id="main-content" class="hidden">
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Market & Trading -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-6 rounded-xl card-shadow relative">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <img src="https://placehold.co/40x40/007bff/ffffff?text=GI" alt="Logo" class="w-10 h-10 rounded-full mr-3 border-2 border-blue-100">
+                                <div><h2 class="text-xl font-bold text-gray-800">GIAA (Live Market)</h2><p class="text-sm text-gray-500">Bursa Efek Indonesia</p></div>
                             </div>
-                            <div className="flex flex-col items-center gap-2 w-1/4">
-                                <div className="w-14 h-14 bg-[#facc15] rounded-2xl flex items-center justify-center shadow-sm">
-                                    <ScanBarcode className="text-yellow-900" size={24} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800 text-center">QRIS</span>
-                            </div>
-                            <div className="flex flex-col items-center gap-2 w-1/4">
-                                <div className="w-14 h-14 bg-[#fb923c] rounded-2xl flex items-center justify-center shadow-sm">
-                                    <CreditCard className="text-orange-900" size={24} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800 text-center">TapCash</span>
-                            </div>
-                            <div className="flex flex-col items-center gap-2 w-1/4">
-                                <div className="w-14 h-14 bg-[#5eead4] rounded-2xl flex items-center justify-center shadow-sm">
-                                    <Smartphone className="text-teal-900" size={24} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-800 text-center">Mobile Tunai</span>
-                            </div>
+                            <div class="text-right"><p class="text-4xl font-extrabold" id="current-price">115</p><p class="text-sm font-semibold text-gray-500" id="price-status">Market Open</p></div>
                         </div>
-                        <button 
-                            onClick={onLogin}
-                            className="w-full bg-[#5eead4] h-14 rounded-full flex items-center justify-center gap-3 active:scale-95 transition-transform shadow-md mb-8"
-                        >
-                            <Fingerprint size={24} className="text-teal-900" />
-                            <span className="text-lg font-bold text-teal-900">Login</span>
-                        </button>
-                        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-[#d9f99d] rounded-full z-0"></div>
-                        <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#f0abfc] rounded-full z-0"></div>
+                        <div class="h-64 w-full mb-4"><canvas id="stockChart"></canvas></div>
+                        
+                        <!-- Trading Interface -->
+                        <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-gray-700">Trading Cepat (20 Detik)</h3><div id="tradeTimerDisplay" class="text-xl font-mono font-bold text-gray-400">00:20</div></div>
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div><label class="block text-xs font-bold text-gray-500 mb-1">MODAL (BID)</label><input type="number" id="bidAmount" value="100000" min="10000" class="input-user"></div>
+                                <div><label class="block text-xs font-bold text-gray-500 mb-1">POTENSI PROFIT (80%)</label><div class="w-full p-3 bg-green-100 border border-green-200 rounded-lg font-bold text-green-700" id="potentialProfit">Rp 80.000</div></div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button id="btnCall" type="button" class="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg shadow-lg flex flex-col items-center justify-center transition active:scale-95"><span>NAIK</span></button>
+                                <button id="btnPut" type="button" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-lg shadow-lg flex flex-col items-center justify-center transition active:scale-95"><span>TURUN</span></button>
+                            </div>
+                            <div id="activeTradeInfo" class="mt-3 text-center text-sm font-semibold hidden"><p>Posisi: <span id="tradePosition" class="uppercase font-bold"></span> @ <span id="tradeEntryPrice"></span></p><p class="text-xs text-gray-500">Menunggu hasil...</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl card-shadow flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
+                        <div><h3 class="font-bold text-gray-800">Investasi Saham Reguler</h3><p class="text-xs text-gray-500">Beli dan simpan saham untuk jangka panjang.</p></div>
+                        <div class="flex space-x-2"><button id="openCompanyInfoBtn" class="py-2 px-4 bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-semibold rounded border border-indigo-200">Info Perusahaan</button><button id="sellBtn" class="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded">Jual Stok</button><button id="buyBtn" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded">Beli Stok</button></div>
                     </div>
                 </div>
-            );
-        };
-
-        // --- Halaman Baru: PIN Page ---
-        const PinPage = ({ onBack, onSuccess, title = "Masukkan MPIN" }) => {
-            const [pin, setPin] = useState("");
-
-            const handlePress = (num) => {
-                if (pin.length < 6) {
-                    setPin(prev => prev + num);
-                }
-            };
-
-            const handleDelete = () => {
-                setPin(prev => prev.slice(0, -1));
-            };
-
-            useEffect(() => {
-                if (pin.length === 6) {
-                    setTimeout(() => {
-                        if (pin === '647077') {
-                            onSuccess();
-                            setPin("");
-                        } else {
-                            alert("PIN Salah. Silakan coba lagi.");
-                            setPin(""); 
-                        }
-                    }, 300);
-                }
-            }, [pin, onSuccess]);
-
-            return (
-                <div className="h-full w-full bg-white flex flex-col font-sans">
-                    <div className="px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20">
-                        <button onClick={onBack} className="p-1 -ml-1">
-                            <ArrowLeft size={24} className="text-black" />
-                        </button>
-                        <h1 className="text-xl font-bold text-black">Keamanan</h1>
-                    </div>
-                    <div className="flex-1 flex flex-col items-center pt-10">
-                        <h2 className="text-xl font-bold text-gray-900 mb-8">{title}</h2>
-                        <div className="flex gap-4 mb-20">
-                            {[...Array(6)].map((_, i) => (
-                                <div 
-                                    key={i} 
-                                    className={`w-4 h-4 rounded-full border border-gray-400 ${i < pin.length ? 'bg-[#ff6600] border-[#ff6600]' : 'bg-transparent'}`}
-                                ></div>
-                            ))}
+                <!-- Right: Profil -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-indigo-50 p-6 rounded-xl card-shadow border-2 border-indigo-200">
+                        <h3 class="text-xl font-bold mb-4 text-indigo-800 flex justify-between items-center">
+                            Profil Pengguna
+                            <span id="statusBadge" class="text-xs px-2 py-1 bg-gray-200 rounded-full text-gray-600 ml-2">Loading...</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="bg-white p-3 rounded-lg border-l-4 border-indigo-500"><p class="text-xs text-gray-500">Nama Pengguna</p><span class="text-lg font-bold text-indigo-700" id="user-name">...</span></div>
+                            <div class="bg-white p-3 rounded-lg border-l-4 border-indigo-500"><p class="text-xs text-gray-500">Nomor Rekening</p><span class="text-sm font-medium text-gray-600 truncate" id="user-id">...</span></div>
+                            <div class="bg-white p-3 rounded-lg flex justify-between items-center border-l-4 border-yellow-500"><span class="font-medium text-gray-700">Saldo Kas RDN</span><span class="text-xl font-bold text-yellow-600" id="rdn-cash-balance">Rp 0</span></div>
+                            <div class="bg-white p-3 rounded-lg flex justify-between items-center border-l-4 border-blue-500"><span class="font-medium text-gray-700">Aset Saham (Lot)</span><span class="text-xl font-bold text-blue-600" id="profile-portfolio-value">Rp 0</span></div>
                         </div>
-                        <div className="w-full px-10 grid grid-cols-3 gap-y-6 gap-x-8">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-                                <button 
-                                    key={num} 
-                                    onClick={() => handlePress(num.toString())}
-                                    className="h-16 w-16 rounded-full flex items-center justify-center text-3xl font-bold text-gray-800 active:bg-gray-100 mx-auto transition-colors"
-                                >
-                                    {num}
-                                </button>
-                            ))}
-                            <div className="h-16 w-16"></div>
-                            <button 
-                                onClick={() => handlePress("0")}
-                                className="h-16 w-16 rounded-full flex items-center justify-center text-3xl font-bold text-gray-800 active:bg-gray-100 mx-auto transition-colors"
-                            >
-                                0
+                        <!-- Action Buttons Grid -->
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <button id="topUpBtn" class="py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition shadow-md flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                Isi Saldo
                             </button>
-                            <button 
-                                onClick={handleDelete}
-                                className="h-16 w-16 rounded-full flex items-center justify-center text-gray-800 active:bg-gray-100 mx-auto transition-colors"
-                            >
-                                <Delete size={28} />
+                            <button id="withdrawalBtn" class="py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition shadow-md flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Tarik Dana
                             </button>
                         </div>
                     </div>
+                    <div class="bg-blue-50 p-6 rounded-xl card-shadow border-2 border-blue-200"><h3 class="font-bold text-blue-800 mb-2">Aset Saham Dimiliki</h3><p class="text-3xl font-bold text-blue-700" id="lot-owned">0 Lot</p><p class="text-sm text-gray-500">Nilai estimasi harga pasar saat ini.</p></div>
                 </div>
-            );
+            </main>
+        </div>
+
+        <!-- Modals and Overlay Components -->
+        
+        <!-- Top Up Input Modal -->
+        <div id="topUpInputModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center p-4 z-[1000]">
+            <div class="bg-white p-6 rounded-xl max-w-md w-full card-shadow">
+                <h3 class="text-2xl font-bold mb-4 text-green-700 border-b pb-2">Isi Saldo RDN</h3>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Nominal Top Up (Rp)</label>
+                    <input type="number" id="topUpAmountInput" min="10000" class="input-user" placeholder="Minimal Rp 10.000">
+                </div>
+                <div class="text-right">
+                    <button type="button" id="cancelTopUpInputBtn" class="py-2 px-4 bg-gray-300 hover:bg-gray-400 rounded-lg mr-2 font-bold">Batal</button>
+                    <button type="button" id="proceedTopUpBtn" class="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold">Lanjut Bayar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Modal -->
+        <div id="orderModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center p-4 z-[1000]">
+            <div class="bg-white p-6 rounded-xl max-w-lg w-full card-shadow"><h3 class="text-2xl font-bold mb-4 border-b pb-2" id="modalTitle">Order Saham</h3><form id="orderForm"><div class="mb-4"><label class="block text-gray-700 font-semibold mb-2">Harga</label><input type="number" id="price" class="input-user bg-gray-100" readonly></div><div class="mb-6"><label class="block text-gray-700 font-semibold mb-2">Jumlah Lot</label><input type="number" id="lots" min="1" value="1" class="input-user" required><p id="minLotWarning" class="text-xs text-red-500 mt-2 hidden">Minimal 1 lot.</p><p id="buyMethodText" class="text-xs text-blue-600 mt-1 hidden">Pembelian menggunakan Saldo RDN.</p></div><div class="text-right"><button type="button" id="cancelOrderBtn" class="py-2 px-4 bg-gray-300 hover:bg-gray-400 rounded-lg mr-2 font-bold">Batal</button><button type="submit" id="submitButton" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Konfirmasi</button></div></form></div>
+        </div>
+        
+        <!-- Payment Modal -->
+        <div id="paymentModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden flex items-center justify-center p-4 z-[1050]">
+            <div class="bg-white p-6 rounded-xl max-w-md w-full text-center" onclick="event.stopPropagation()">
+                <h3 class="text-2xl font-bold mb-4 text-green-700 border-b pb-2">Transfer Top Up</h3>
+                <div class="bg-red-500 text-white font-extrabold text-4xl p-3 rounded-lg mb-4 shadow-inner"><span id="paymentTimer">01:00:00</span></div><div class="bg-gray-50 p-4 rounded-lg border border-gray-200 text-left mb-4"><p class="text-lg font-semibold text-gray-700 mb-2">Total Transfer:</p><p class="text-4xl font-extrabold text-blue-600" id="paymentAmount">Rp 0</p></div><div class="bg-yellow-50 p-4 rounded-lg border border-yellow-300 text-left mb-6 space-y-2"><div class="flex justify-between"><span>Bank:</span><span class="font-bold">BRI</span></div><div class="flex justify-between"><span>No. Rek:</span><span class="font-bold text-red-600">459801043667539</span></div><div class="flex justify-between"><span>Penerima:</span><span class="font-bold">GATOT SATRIAWAN</span></div></div>
+                <button type="button" id="paymentConfirmBtn" class="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg cursor-pointer">Sudah Transfer</button>
+                <button type="button" id="paymentCancelBtn" class="w-full py-3 mt-3 bg-gray-200 text-gray-800 font-bold rounded-lg hover:bg-gray-300 shadow cursor-pointer">Batalkan & Kembali</button>
+            </div>
+        </div>
+
+        <!-- Withdrawal Modal -->
+        <div id="withdrawalModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 hidden flex items-center justify-center p-4 z-[1000]"><div class="bg-white p-6 rounded-xl max-w-lg w-full"><h3 class="text-2xl font-bold mb-4 text-indigo-700">Tarik Dana</h3><form id="withdrawalForm"><div class="bg-yellow-50 p-3 rounded-lg mb-4 border border-yellow-200"><p class="text-sm font-semibold">Saldo RDN Tersedia:</p><p class="text-2xl font-bold text-yellow-600" id="modal-rdn-balance">Rp 0</p></div><div class="mb-6"><input type="number" id="withdrawalAmount" min="1000" class="input-user" value="100000" required></div><div class="text-right"><button type="button" id="cancelWithdrawalBtn" class="py-2 px-4 bg-gray-300 rounded-lg mr-2 font-bold">Batal</button><button type="submit" class="py-2 px-4 bg-indigo-600 text-white rounded-lg">Konfirmasi</button></div></form></div></div>
+        
+        <!-- Result Modal -->
+        <div id="resultModal" class="fixed inset-0 bg-gray-900 bg-opacity-90 hidden flex items-center justify-center p-4 z-[1050]"><div class="bg-white p-8 rounded-xl max-w-sm w-full text-center"><div id="resultIcon" class="mx-auto mb-4 w-20 h-20 flex items-center justify-center rounded-full text-4xl"></div><h3 class="text-2xl font-bold mb-2" id="resultTitle">Hasil</h3><p class="text-gray-600 mb-6" id="resultMessage">Detail hasil trading.</p><button onclick="document.getElementById('resultModal').classList.add('hidden')" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg">Tutup</button></div></div>
+        
+        <!-- URGENT ALERT MODAL -->
+        <div id="urgentAlertModal" class="fixed inset-0 bg-black/95 flex items-center justify-center z-[2000] hidden">
+            <div class="bg-red-600 p-1 rounded-2xl shadow-2xl max-w-md w-full animate-bounce-in transform scale-105">
+                <div class="bg-white p-8 rounded-xl text-center">
+                    <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    </div>
+                    <h3 id="urgentTitle" class="text-2xl font-bold mb-3 text-gray-900">PEMBERITAHUAN PENTING</h3>
+                    <p id="urgentBody" class="text-gray-600 mb-6 text-lg leading-relaxed">Mohon perhatikan pesan ini.</p>
+                    <button id="urgentConfirmBtn" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold text-lg rounded-xl shadow-lg transition transform active:scale-95">OK, SAYA MENGERTI</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Company Info Page -->
+        <div id="company-info-page" class="hidden max-w-4xl mx-auto animate-fade-in"><div class="bg-white p-5 rounded-xl mb-6 flex justify-between items-center card-shadow border-l-4 border-blue-600"><div><h2 class="text-2xl font-bold text-gray-800">Profil Perusahaan</h2><p class="text-sm text-gray-500">PT Garuda Indonesia (Persero) Tbk.</p></div><button id="backToDashboardBtn" class="py-2 px-4 bg-gray-100 text-blue-600 font-bold rounded-lg hover:bg-gray-200 transition flex items-center">Kembali ke Dashboard</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div class="bg-white p-6 rounded-xl card-shadow"><h3 class="text-lg font-bold mb-4 border-b pb-2">Data Fundamental</h3><div class="space-y-4"><div class="flex justify-between items-center border-b pb-2"><span class="text-gray-500">Kode Saham</span><span class="font-bold text-blue-600">GIAA</span></div><div class="flex justify-between items-center border-b border-gray-50 pb-2"><span class="text-gray-500">Sektor</span><span class="font-medium text-right text-gray-800">Transportasi & Logistik (Penerbangan)</span></div><div class="flex justify-between items-center border-b border-gray-50 pb-2"><span class="text-gray-500">Kapitalisasi Pasar</span><span class="font-medium text-gray-800">Rp 10.52 Triliun</span></div><div class="flex justify-between items-center"><span class="text-gray-500">P/E Ratio</span><span class="font-medium text-red-500">-5.5x</span></div></div></div><div class="bg-white p-6 rounded-xl card-shadow"><h3 class="text-lg font-bold mb-4 border-b pb-2 text-gray-800">Kontak Hubungan Investor</h3><div class="space-y-4"><div class="flex justify-between items-center border-b border-gray-50 pb-2"><span class="text-gray-500">Jabatan</span><span class="font-medium text-gray-800">VP Financial Accounting</span></div><div class="flex justify-between items-center border-b border-gray-50 pb-2"><span class="text-gray-500">Nama Kontak</span><span class="font-medium text-gray-800">Gatot Satriawan</span></div><div class="flex flex-col"><span class="text-gray-500 mb-1">Email Resmi</span><span class="font-medium text-blue-600 break-all">ccfoundation.volunteer@gmail.com</span></div></div></div></div></div>
+        <div id="notificationBox" class="fixed bottom-4 right-4 text-white p-4 rounded-lg shadow-xl hidden opacity-0 transition-opacity duration-300 z-[500]"></div>
+        <div id="chat-widget-container" class="fixed bottom-24 right-6 z-[9999]"><button id="chat-toggle-btn" class="w-14 h-14 bg-sky-600 text-white rounded-full shadow-2xl flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg></button></div>
+        <div id="app-container" class="fixed bottom-24 right-6 z-[9999] hidden w-full max-w-[360px] bg-white shadow-2xl rounded-2xl overflow-hidden mb-4 border border-gray-200">
+            <header class="bg-gradient-to-r from-sky-600 to-blue-600 text-white p-4 flex justify-between items-center shadow-lg"><div><h1 class="text-sm font-bold">CS Ginvest Live</h1><p class="text-[10px] opacity-80" id="chat-user-display">Connecting...</p></div><button onclick="document.getElementById('app-container').classList.add('hidden')" class="text-white hover:text-gray-200">&times;</button></header>
+            <div id="chat-screen" class="flex flex-col h-[350px]"><div id="messages-container" class="flex-grow px-3 py-4 overflow-y-auto space-y-3 bg-gray-50"><div class="text-center text-xs text-gray-400 mt-4">Mulai percakapan dengan CS...</div></div><div class="p-3 border-t border-gray-200 bg-white"><div class="flex space-x-2"><input type="text" id="message-input" placeholder="Tulis pesan..." class="flex-grow px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500" maxlength="200"><button id="send-button" class="flex-shrink-0 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition">Kirim</button></div></div></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, getDocs, deleteDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-ginvest-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyA_FynN_E6zxOEHo3k2t-olypo2Tu_D-zQ", authDomain: "webchatapp90.firebaseapp.com", projectId: "webchatapp90" };
+        const app = initializeApp(firebaseConfig, "GInvestUser");
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        const USERS_COLLECTION = `artifacts/${appId}/public/data/ginvest_users`;
+        const CONFIG_DOC_PATH = `artifacts/${appId}/public/data/ginvest_market/config`;
+        const MARKET_DOC_PATH = `artifacts/${appId}/public/data/ginvest_market/giaa`;
+        const CHAT_COLLECTION_PATH = `artifacts/${appId}/public/data/ginvest_chats`;
+        const ADMIN_NOTIFS_COLLECTION = `artifacts/${appId}/public/data/ginvest_admin_notifs`; 
+        const ADMIN_EMAIL = 'admin9090@gmail.com';
+
+        let currentUserId = null; 
+        let currentUserData = { name: "Pengunjung", bank: "-", accountNumber: "-", lotOwned: 0, rdnBalance: 0, hasToppedUp: false, status: 'TRIAL', pendingTopUp: 0, pendingWithdrawal: 0 };
+        let tempPhoneForReg = "", tempPassForReg = "";
+        let currentPrice = 115, chartInstance, marketMode = 'RANDOM', marketInterval;
+        let pendingTopUpAmount = 0;
+        let tradingState = { isTrading: false, timer: 20, interval: null, entryPrice: 0, direction: '', bidAmount: 0, targetOutcome: 'RANDOM' };
+        const CHART_LENGTH = 30;
+
+        function formatRupiah(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n); }
+        function formatNumber(n) { return new Intl.NumberFormat('id-ID').format(n); }
+        function safeAddEventListener(id, event, handler) { const el = document.getElementById(id); if (el) el.addEventListener(event, handler); }
+
+        function showTransactionPopup(msg) {
+            const popup = document.getElementById('tempTransactionPopup');
+            popup.querySelector('p').textContent = msg;
+            popup.classList.remove('hidden'); popup.classList.add('flex', 'fade-in-up');
+            setTimeout(() => { popup.classList.remove('fade-in-up'); popup.classList.add('fade-out-down'); setTimeout(() => { popup.classList.add('hidden'); popup.classList.remove('flex', 'fade-out-down'); }, 300); }, 2000);
         }
 
-        // --- Halaman 3: Dashboard Utama ---
-        const DashboardPage = ({ onLogout, onNavigate, balance }) => {
-            const [showBalance, setShowBalance] = useState(true);
-            const formattedBalance = `Rp${balance.toLocaleString('id-ID')}`;
+        function showNotification(msg, success = true) {
+            const box = document.getElementById('notificationBox');
+            box.textContent = msg;
+            box.className = `fixed bottom-4 right-4 text-white p-4 rounded-lg shadow-xl z-[500] transition-opacity duration-300 ${success ? 'bg-green-500' : 'bg-red-500'}`;
+            box.classList.remove('hidden', 'opacity-0');
+            setTimeout(() => box.classList.add('opacity-0'), 4000);
+            setTimeout(() => box.classList.add('hidden'), 4300);
+        }
 
-            const features = [
-                { name: 'Transfer', icon: Send, color: 'bg-teal-100', iconColor: 'text-teal-700', action: () => onNavigate('transfer') },
-                { name: 'TapCash', icon: CreditCard, color: 'bg-orange-100', iconColor: 'text-orange-600' },
-                { name: 'Bayar & Beli', icon: FileText, color: 'bg-blue-100', iconColor: 'text-blue-600' },
-                { name: 'E-Wallet', icon: Wallet, color: 'bg-teal-100', iconColor: 'text-teal-700', action: () => onNavigate('ewallet') },
-                { name: 'Virtual Account', icon: Smartphone, color: 'bg-teal-100', iconColor: 'text-teal-700' },
-                { name: 'Transfer LN', icon: Globe, color: 'bg-teal-100', iconColor: 'text-teal-700' },
-                { name: 'Lifestyle', icon: ShoppingBag, color: 'bg-purple-100', iconColor: 'text-purple-700' },
-                { name: 'Lihat Semua', icon: Grid, color: 'bg-gray-100', iconColor: 'text-gray-700' },
-            ];
+        async function initAuth() { if (!auth.currentUser) { if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken); else await signInAnonymously(auth); } }
+        async function seedDefaultUser() {
+            const userRef = doc(db, USERS_COLLECTION, "081226418380");
+            try { const snap = await getDoc(userRef); if (!snap.exists()) await setDoc(userRef, { password: "qwerty123", name: "Bagus Ramadhani", bank: "BRI", accountNumber: "459801043667539", lotOwned: 1000, rdnBalance: 81000000, isTransactionPending: false, hasMadeFirstPurchase: false, isWithdrawalPending: false, hasToppedUp: true, status: 'PREMIUM', pendingTopUp: 0, pendingWithdrawal: 0 }); } catch(e) {}
+        }
 
-            return (
-                <div className="h-full w-full bg-gray-50 overflow-y-auto font-sans pb-20 no-scrollbar">
-                    <div className="bg-white px-5 pt-6 pb-4 sticky top-0 z-20">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="scale-75 origin-left">
-                                <WondrLogo size="text-3xl" />
-                            </div>
-                            <div className="flex gap-3">
-                                <div className="px-3 py-1 rounded-full border border-orange-500 flex items-center gap-1">
-                                    <span className="text-xs font-bold text-gray-800">© Poin</span>
-                                </div>
-                                <button onClick={onLogout} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">
-                                    <LogOut size={14} className="text-gray-600" />
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-end mb-6">
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-xl font-bold text-gray-900">Hi, Satriya!</h1>
-                            </div>
-                            <div className="flex gap-4 text-gray-600">
-                                <div className="flex flex-col items-center">
-                                    <Bell size={20} />
-                                    <span className="text-[10px] mt-1">Notifikasi</span>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <ReceiptText size={20} />
-                                    <span className="text-[10px] mt-1">Bukti Transaksi</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="bg-gray-50 p-1 rounded-full flex justify-between mb-2">
-                            <button className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-full">Insight</button>
-                            <button className="flex-1 py-2 text-sm font-bold text-gray-900 bg-[#d9f99d] rounded-full shadow-sm">Transaksi</button>
-                            <button className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-full">Growth</button>
-                        </div>
-                    </div>
-                    <div className="px-5 pt-2">
-                        <div className="flex justify-between items-center mb-3">
-                            <h2 className="font-bold text-lg text-gray-900">Rekening transaksi kamu</h2>
-                            <span className="text-orange-500 text-sm font-bold underline cursor-pointer">Lihat Semua</span>
-                        </div>
-                        <div className="flex h-40 w-full mb-8 shadow-lg rounded-2xl overflow-hidden relative">
-                            <div className="w-1/3 bg-[#a5f3fc] flex flex-col items-center justify-center relative p-3 text-center">
-                                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center mb-2 shadow-sm border border-gray-100">
-                                    <div className="w-5 h-5 rounded-full border-2 border-black border-t-transparent animate-spin-slow"></div>
-                                </div>
-                                <span className="text-xs font-semibold leading-tight text-teal-900">Lihat Portfolio</span>
-                                <div className="absolute right-0 top-0 bottom-0 w-4 bg-white opacity-20 transform skew-x-12 translate-x-2"></div>
-                            </div>
-                            <div className="flex-1 bg-gradient-to-br from-orange-400 to-orange-300 p-4 relative">
-                                <div className="flex justify-between items-start mb-1">
-                                    <div>
-                                        <p className="text-xs text-orange-900 font-semibold uppercase tracking-wide">TAPLUS</p>
-                                        <p className="text-lg font-bold text-gray-900 tracking-wider">1990943608</p>
-                                    </div>
-                                    <span className="bg-white/90 text-[10px] font-bold px-2 py-1 rounded-full text-orange-600">UTAMA</span>
-                                </div>
-                                <div className="mt-6 relative z-10">
-                                    <p className="text-xs text-orange-900 mb-1">Saldo efektif</p>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl font-extrabold text-gray-900">
-                                            {showBalance ? formattedBalance : "Rp •••••••"}
-                                        </span>
-                                        <button onClick={() => setShowBalance(!showBalance)} className="text-gray-900 opacity-70 cursor-pointer">
-                                            {showBalance ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="absolute -bottom-10 -right-5 w-32 h-32 bg-white opacity-10 rounded-full"></div>
-                            </div>
-                        </div>
-                        <div className="flex justify-center gap-2 mb-8">
-                            <div className="w-2 h-2 rounded-full bg-black"></div>
-                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
-                        </div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="font-bold text-lg text-gray-900">Fitur pilihan kamu</h2>
-                            <span className="text-orange-500 text-sm font-bold underline cursor-pointer">Atur</span>
-                        </div>
-                        <div className="grid grid-cols-4 gap-y-6 gap-x-2 mb-10">
-                            {features.map((item, idx) => (
-                                <div key={idx} onClick={item.action} className="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform">
-                                    <div className={`w-14 h-14 ${item.color} rounded-2xl flex items-center justify-center shadow-sm`}>
-                                        <item.icon className={item.iconColor} size={24} strokeWidth={2} />
-                                    </div>
-                                    <span className="text-[11px] font-semibold text-center leading-tight px-1 text-gray-800">{item.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="font-bold text-lg text-gray-900">Promo buat kamu</h2>
-                            <span className="text-orange-500 text-sm font-bold underline cursor-pointer">Lihat Semua</span>
-                        </div>
-                        <div className="w-full h-40 bg-[#d9f99d] rounded-2xl relative overflow-hidden flex items-center mb-10 border border-gray-100 shadow-md">
-                            <div className="w-1/2 p-5 z-10">
-                                <div className="inline-block bg-[#facc15] px-2 py-0.5 rounded-md text-[10px] font-bold mb-2 shadow-sm">Hingga 31 Des 2025</div>
-                                <h3 className="text-sm font-extrabold text-gray-900 leading-tight">Ajak Teman Kamu, Dapatkan Reward</h3>
-                            </div>
-                            <div className="absolute right-0 top-0 bottom-0 w-2/3 bg-[#8b5cf6] rounded-l-full transform translate-x-10 z-0"></div>
-                            <div className="absolute right-5 z-10 bg-black text-white px-3 py-1 rounded-lg text-xs font-mono font-bold tracking-widest border border-white">
-                                QRIS
-                            </div>
-                            <div className="absolute top-2 right-10 text-yellow-300 text-xs">✦</div>
-                            <div className="absolute bottom-4 right-20 text-yellow-300 text-lg">✦</div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman 4: Transfer Page ---
-        const TransferPage = ({ onBack, onNavigate }) => {
-            return (
-                <div className="h-full w-full bg-[#f8f9fa] flex flex-col font-sans">
-                    <div className="bg-white px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 shadow-sm">
-                        <button onClick={onBack} className="p-1 -ml-1">
-                            <ArrowLeft size={24} className="text-black" />
-                        </button>
-                        <h1 className="text-xl font-bold text-black">Transfer</h1>
-                    </div>
-                    <div className="p-5 flex-1 overflow-y-auto">
-                        <div className="flex items-center gap-2 mb-8">
-                            <div onClick={() => onNavigate('transfer-form')} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center w-[100px] h-[100px] flex-shrink-0 cursor-pointer active:bg-gray-50 transition-colors">
-                                <div className="w-10 h-10 rounded-full border border-teal-500 flex items-center justify-center mb-2">
-                                    <UserPlus size={20} className="text-teal-600" />
-                                </div>
-                                <span className="text-[10px] font-bold text-center text-black leading-tight">Penerima Baru</span>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center w-[100px] h-[100px] flex-shrink-0 opacity-60">
-                                <div className="w-10 h-10 rounded-full border border-teal-500 flex items-center justify-center mb-2">
-                                    <Repeat size={20} className="text-teal-600" />
-                                </div>
-                                <span className="text-[10px] font-bold text-center text-black leading-tight">Diri Sendiri</span>
-                            </div>
-                            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center w-[100px] h-[100px] flex-shrink-0 opacity-60">
-                                <div className="w-10 h-10 rounded-full border border-teal-500 flex items-center justify-center mb-2">
-                                    <Users size={20} className="text-teal-600" />
-                                </div>
-                                <span className="text-[10px] font-bold text-center text-black leading-tight">Grup Baru</span>
-                            </div>
-                            <div className="flex flex-col gap-1 ml-1">
-                                <div className="w-1.5 h-1.5 bg-black rounded-full"></div>
-                                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full"></div>
-                            </div>
-                        </div>
-                        <div className="bg-gray-200/50 p-1 rounded-full flex justify-between mb-10">
-                            <button className="flex-1 py-2 text-sm font-bold text-black bg-[#d9f99d] rounded-full shadow-sm">Tersimpan</button>
-                            <button className="flex-1 py-2 text-sm font-medium text-gray-500 rounded-full">Terakhir</button>
-                        </div>
-                        <div className="flex flex-col items-center justify-center mt-4">
-                            <EmptyBoxIllustration />
-                            <h3 className="text-lg font-bold text-black mt-6 mb-2 text-center">Kamu belum pernah simpan penerima</h3>
-                            <p className="text-sm text-gray-600 text-center leading-relaxed px-4">
-                                Yuk, transfer sekarang dan simpan penerimanya. Nanti kalau mau transfer, bisa langsung pilih dari daftar ini.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman 5: Form Transfer ---
-        const TransferFormPage = ({ onBack, onSubmit }) => {
-            const [formData, setFormData] = useState({
-                rekening: '',
-                bank: 'BNI',
-                nama: '',
-                jumlah: '',
-                catatan: ''
-            });
-
-            const handleChange = (e) => {
-                const { name, value } = e.target;
-                setFormData(prev => ({ ...prev, [name]: value }));
-            };
-
-            const handleAmountChange = (e) => {
-                let value = e.target.value;
-                const numberString = value.replace(/\D/g, '');
-                const formatted = numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                setFormData(prev => ({ ...prev, jumlah: formatted }));
-            };
-
-            const handleNext = () => {
-                const rawAmount = parseInt(formData.jumlah.replace(/\./g, ''), 10);
-                if (formData.rekening && formData.nama && rawAmount > 0) {
-                    const submitData = {
-                        ...formData,
-                        jumlah: rawAmount
-                    };
-                    onSubmit(formData.catatan, submitData);
-                } else {
-                    alert("Mohon lengkapi data rekening, nama, dan jumlah.");
-                }
-            };
-
-            return (
-                <div className="h-full w-full bg-[#f8f9fa] flex flex-col font-sans">
-                    <div className="bg-white px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 shadow-sm">
-                        <button onClick={onBack} className="p-1 -ml-1">
-                            <ArrowLeft size={24} className="text-black" />
-                        </button>
-                        <h1 className="text-xl font-bold text-black">Penerima Baru</h1>
-                    </div>
-                    <div className="p-5 flex-1 overflow-y-auto">
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Nomor Rekening</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <CreditCard size={20} className="text-gray-400" />
-                                    <input type="number" name="rekening" value={formData.rekening} onChange={handleChange} className="w-full outline-none text-gray-900 font-bold placeholder-gray-300" placeholder="Contoh: 1234567890" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Bank Tujuan</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <Landmark size={20} className="text-gray-400" />
-                                    <select name="bank" value={formData.bank} onChange={handleChange} className="w-full outline-none text-gray-900 font-bold bg-transparent">
-                                        <option value="BNI">BNI</option>
-                                        <option value="BCA">BCA</option>
-                                        <option value="MANDIRI">MANDIRI</option>
-                                        <option value="BRI">BRI</option>
-                                        <option value="CIMB">CIMB NIAGA</option>
-                                        <option value="BSI">BSI</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Nama Penerima</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <UserPlus size={20} className="text-gray-400" />
-                                    <input type="text" name="nama" value={formData.nama} onChange={handleChange} className="w-full outline-none text-gray-900 font-bold placeholder-gray-300" placeholder="Nama Lengkap" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Jumlah Transfer</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <Banknote size={20} className="text-gray-400" />
-                                    <input type="text" name="jumlah" value={formData.jumlah} onChange={handleAmountChange} className="w-full outline-none text-gray-900 font-bold placeholder-gray-300" placeholder="0" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Catatan</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <FileText size={20} className="text-gray-400" />
-                                    <input type="text" name="catatan" value={formData.catatan} onChange={handleChange} className="w-full outline-none text-gray-900 font-medium placeholder-gray-300" placeholder="Tulis catatan (Opsional)" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-5 bg-white border-t border-gray-100">
-                        <button onClick={handleNext} className="w-full bg-[#5eead4] h-12 rounded-full flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md font-bold text-teal-900">Lanjut</button>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman Baru: E-Wallet Page ---
-        const EWalletPage = ({ onBack, onSelectProvider }) => {
-            const providers = [
-                { name: 'GoPay', color: 'bg-blue-100', textColor: 'text-blue-600' },
-                { name: 'OVO', color: 'bg-purple-100', textColor: 'text-purple-600' },
-                { name: 'Dana', color: 'bg-sky-100', textColor: 'text-sky-600' },
-                { name: 'ShopeePay', color: 'bg-orange-100', textColor: 'text-orange-600' },
-                { name: 'LinkAja', color: 'bg-red-100', textColor: 'text-red-600' },
-                { name: 'i.saku', color: 'bg-indigo-100', textColor: 'text-indigo-600' },
-            ];
-
-            return (
-                <div className="h-full w-full bg-[#f8f9fa] flex flex-col font-sans">
-                    <div className="bg-white px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 shadow-sm">
-                        <button onClick={onBack} className="p-1 -ml-1">
-                            <ArrowLeft size={24} className="text-black" />
-                        </button>
-                        <h1 className="text-xl font-bold text-black">E-Wallet</h1>
-                    </div>
-                    <div className="p-5 flex-1 overflow-y-auto">
-                        <h2 className="font-bold text-lg text-gray-900 mb-4">Pilih E-Wallet</h2>
-                        <div className="grid grid-cols-3 gap-4">
-                            {providers.map((item, idx) => (
-                                <div key={idx} onClick={() => onSelectProvider(item.name)} className="flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                                    <div className={`w-12 h-12 ${item.color} rounded-full flex items-center justify-center`}>
-                                        <Wallet className={item.textColor} size={24} />
-                                    </div>
-                                    <span className="text-xs font-bold text-center text-gray-800">{item.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman Baru: E-Wallet Form Page ---
-        const EWalletFormPage = ({ onBack, provider, onSubmit }) => {
-            const [formData, setFormData] = useState({ phone: '', amount: '', catatan: '' });
-
-            const handleAmountChange = (e) => {
-                let value = e.target.value;
-                const numberString = value.replace(/\D/g, '');
-                const formatted = numberString.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-                setFormData(prev => ({ ...prev, amount: formatted }));
-            };
-
-            const handleChange = (e) => {
-                const { name, value } = e.target;
-                setFormData(prev => ({ ...prev, [name]: value }));
-            };
-
-            const handleNext = () => {
-                const rawAmount = parseInt(formData.amount.replace(/\./g, ''), 10);
-                if (formData.phone && rawAmount > 0) {
-                    const submitData = {
-                        nama: provider,
-                        rekening: formData.phone,
-                        bank: 'E-Wallet',
-                        jumlah: rawAmount
-                    };
-                    onSubmit(formData.catatan, submitData);
-                } else {
-                    alert("Mohon lengkapi nomor HP dan nominal.");
-                }
-            };
-
-            return (
-                <div className="h-full w-full bg-[#f8f9fa] flex flex-col font-sans">
-                    <div className="bg-white px-5 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 shadow-sm">
-                        <button onClick={onBack} className="p-1 -ml-1">
-                            <ArrowLeft size={24} className="text-black" />
-                        </button>
-                        <h1 className="text-xl font-bold text-black">Top Up {provider}</h1>
-                    </div>
-                    <div className="p-5 flex-1 overflow-y-auto">
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Nomor Handphone</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <Smartphone size={20} className="text-gray-400" />
-                                    <input type="number" name="phone" value={formData.phone} onChange={handleChange} className="w-full outline-none text-gray-900 font-bold placeholder-gray-300" placeholder="Contoh: 08123456789" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Nominal Top Up</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <Banknote size={20} className="text-gray-400" />
-                                    <input type="text" name="amount" value={formData.amount} onChange={handleAmountChange} className="w-full outline-none text-gray-900 font-bold placeholder-gray-300" placeholder="0" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase">Catatan</label>
-                                <div className="bg-white p-3 rounded-xl border border-gray-200 focus-within:border-teal-500 flex items-center gap-3">
-                                    <FileText size={20} className="text-gray-400" />
-                                    <input type="text" name="catatan" value={formData.catatan} onChange={handleChange} className="w-full outline-none text-gray-900 font-medium placeholder-gray-300" placeholder="Tulis catatan (Opsional)" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-5 bg-white border-t border-gray-100">
-                        <button onClick={handleNext} className="w-full bg-[#5eead4] h-12 rounded-full flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md font-bold text-teal-900">Lanjut</button>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Halaman 6: Status Page (Updated) ---
-        const StatusPage = ({ isSuccess, onHome, transactionData }) => {
-            const { 
-                nama = 'AGUS WIDODO', 
-                rekening = '1836954270', 
-                jumlah = '27919', 
-                bank = 'BNI',
-                timestamp = '29 Nov 2025 • 04:52:02 WIB',
-                refID = '20251129045202000499'
-            } = transactionData || {};
-
-            const formattedJumlah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(jumlah).replace('IDR', 'Rp');
-
-            if (!isSuccess) {
-                return (
-                    <div className="h-full w-full bg-white flex flex-col items-center justify-center p-6 relative">
-                        <div className="mb-6 animate-bounce">
-                            <XCircle size={80} className="text-red-500" />
-                        </div>
-                        <h2 className="text-2xl font-bold mb-2 text-red-600">Transaksi Gagal</h2>
-                        <p className="text-gray-500 text-center text-sm mb-10 leading-relaxed px-4">
-                            Maaf, Rekening atau kontak penerima saat ini sedang menjalani maintenance system. Silahkan coba lagi dalam beberapa jam kedepan.
-                        </p>
-                        <button onClick={onHome} className="w-full bg-gray-100 text-gray-800 h-12 rounded-full font-bold active:scale-95 transition-transform">
-                            Kembali ke Dashboard
-                        </button>
-                        <div className="absolute top-0 left-0 w-full h-2 bg-red-400"></div>
-                    </div>
-                )
-            }
-
-            return (
-                <div className="h-full w-full bg-white flex flex-col items-center pt-20 pb-6 px-6 font-sans relative overflow-hidden">
-                    <div className="z-10 animate-fade-in-up">
-                        <SuccessIllustration />
-                    </div>
-                    <h2 className="text-xl font-bold mb-1 text-black z-10">Transaksi berhasil!</h2>
-                    <h1 className="text-4xl font-extrabold text-black mb-2 z-10">{formattedJumlah}</h1>
-                    <div className="flex flex-col items-center text-xs font-medium text-gray-500 mb-8 z-10">
-                        <span>{timestamp} •</span>
-                        <span>Ref ID: {refID}</span>
-                    </div>
-                    <div className="flex gap-4 w-full justify-center mb-8 z-10">
-                        <button className="flex flex-col items-center justify-center w-24 h-24 bg-[#ff6600] text-white rounded-2xl active:scale-95 transition shadow-sm">
-                            <div className="w-8 h-8 mb-2 flex items-center justify-center border-2 border-white rounded-lg">
-                                <ReceiptText size={16} />
-                            </div>
-                            <span className="text-[10px] font-bold">Bukti Transaksi</span>
-                        </button>
-                        <button className="flex flex-col items-center justify-center w-24 h-24 bg-[#ff6600] text-white rounded-2xl active:scale-95 transition shadow-sm">
-                            <div className="w-8 h-8 mb-2 flex items-center justify-center border-2 border-white rounded-lg">
-                                <Share2 size={16} />
-                            </div>
-                            <span className="text-[10px] font-bold">Bagikan</span>
-                        </button>
-                    </div>
-                    <div className="w-full space-y-4 mb-auto z-10">
-                        <div className="w-full">
-                            <p className="text-xs text-gray-500 mb-1 ml-1">Tujuan</p>
-                            <div className="w-full border border-gray-300 rounded-xl p-3 bg-white">
-                                <p className="font-bold text-sm text-black">{nama}</p>
-                                <p className="text-xs text-gray-500">{bank} • {rekening}</p>
-                            </div>
-                        </div>
-                        <div className="w-full">
-                            <p className="text-xs text-gray-500 mb-1 ml-1">Sumber dana</p>
-                            <div className="w-full border border-gray-300 rounded-xl p-3 bg-white">
-                                <p className="font-bold text-sm text-black">SATRIYA</p>
-                                <p className="text-xs text-gray-500">TAPLUS • *******608</p>
-                            </div>
-                        </div>
-                    </div>
-                    <button onClick={onHome} className="w-full bg-[#5eead4] text-teal-900 h-14 rounded-full font-bold text-lg active:scale-95 transition-transform z-10 shadow-lg mt-4">
-                        Kembali ke Beranda
-                    </button>
-                    <div className="absolute top-10 left-[-50px] w-40 h-40 bg-[#d9f99d] rounded-full opacity-50 z-0 blur-xl"></div>
-                    <div className="absolute bottom-[-20px] right-[-20px] w-64 h-64 bg-[#ccfbf1] rounded-full opacity-60 z-0 blur-xl"></div>
-                </div>
-            );
-        };
-
-        // --- Main App Component ---
-        const WondrApp = () => {
-            const [currentPage, setCurrentPage] = useState('splash');
-            const [transactionSuccess, setTransactionSuccess] = useState(false);
-            const [lastTransaction, setLastTransaction] = useState(null);
-            const [selectedEWallet, setSelectedEWallet] = useState(null);
-            const [balance, setBalance] = useState(165982003);
-            const [pinContext, setPinContext] = useState(null);
-
-            const handleSplashFinish = () => setCurrentPage('login');
-            const handleLogin = () => {
-                setPinContext({ type: 'LOGIN' });
-                setCurrentPage('pin');
-            };
-            const handleLogout = () => setCurrentPage('login');
-            const handleNavigate = (page) => setCurrentPage(page);
-            const handleSelectEWallet = (provider) => {
-                setSelectedEWallet(provider);
-                setCurrentPage('ewallet-form');
-            };
-
-            const handlePinSuccess = () => {
-                if (pinContext?.type === 'LOGIN') {
-                    setCurrentPage('dashboard');
-                } else if (pinContext?.type === 'TRANSACTION') {
-                    executeTransaction(pinContext.note, pinContext.data);
-                }
-            };
-
-            const handleTransactionSubmit = (note, data) => {
-                setPinContext({ type: 'TRANSACTION', note, data });
-                setCurrentPage('pin');
-            };
-
-            const executeTransaction = (note, data) => {
-                const now = new Date();
-                const dateOptions = { day: '2-digit', month: 'short', year: 'numeric' };
-                const dateStr = now.toLocaleDateString('id-ID', dateOptions);
-                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-                const timeStr = now.toLocaleTimeString('id-ID', timeOptions).replace(/\./g, ':');
-                const yyyy = now.getFullYear();
-                const mm = String(now.getMonth() + 1).padStart(2, '0');
-                const dd = String(now.getDate()).padStart(2, '0');
-                const hh = String(now.getHours()).padStart(2, '0');
-                const min = String(now.getMinutes()).padStart(2, '0');
-                const ss = String(now.getSeconds()).padStart(2, '0');
-                const random = Math.floor(100000 + Math.random() * 900000);
-                const refID = `${yyyy}${mm}${dd}${hh}${min}${ss}${random}`;
-
-                const fullTransactionData = {
-                    ...data,
-                    timestamp: `${dateStr} • ${timeStr} WIB`,
-                    refID: refID
-                };
-
-                if (note && note.trim().length > 0) {
-                    setTransactionSuccess(true);
-                    setBalance(prev => prev - data.jumlah);
-                } else {
-                    setTransactionSuccess(false);
-                }
-                
-                setLastTransaction(fullTransactionData);
-                setCurrentPage('status');
-            };
-
-            return (
-                <div className="w-full max-w-sm h-[800px] bg-white rounded-[40px] shadow-2xl overflow-hidden relative border-8 border-gray-900">
-                    {currentPage === 'splash' && <SplashScreen onFinish={handleSplashFinish} />}
-                    {currentPage === 'login' && <LoginPage onLogin={handleLogin} />}
-                    
-                    {currentPage === 'pin' && (
-                        <PinPage 
-                            onBack={() => {
-                                if (pinContext?.type === 'LOGIN') setCurrentPage('login');
-                                else if (pinContext?.type === 'TRANSACTION') {
-                                    if (pinContext.data.bank === 'E-Wallet') setCurrentPage('ewallet-form');
-                                    else setCurrentPage('transfer-form');
+        function listenToUserData() {
+            if(!currentUserId) return;
+            let lastNotifTime = 0;
+            onSnapshot(doc(db, USERS_COLLECTION, currentUserId), (docSnap) => {
+                if(docSnap.exists()) {
+                    const data = docSnap.data();
+                    currentUserData = data; updateUI();
+                    if (data.systemNotification && data.systemNotification.timestamp) {
+                        const serverTime = data.systemNotification.timestamp.toMillis ? data.systemNotification.timestamp.toMillis() : 0;
+                        const now = Date.now();
+                        if (serverTime > now - 15000 && serverTime !== lastNotifTime) {
+                            lastNotifTime = serverTime;
+                            if (data.systemNotification.type === 'CUSTOM_URGENT') {
+                                document.getElementById('urgentTitle').textContent = data.systemNotification.title || "PEMBERITAHUAN";
+                                document.getElementById('urgentBody').textContent = data.systemNotification.msg;
+                                document.getElementById('urgentAlertModal').classList.remove('hidden');
+                            } else if (data.systemNotification.type === 'TOPUP') {
+                                if (currentUserData.pendingTopUp > 0) {
+                                    const newBalance = (currentUserData.rdnBalance || 0) + currentUserData.pendingTopUp;
+                                    updateDoc(doc(db, USERS_COLLECTION, currentUserId), { rdnBalance: newBalance, pendingTopUp: 0 });
+                                    showNotification("Top Up berhasil masuk!", true);
                                 }
-                            }}
-                            onSuccess={handlePinSuccess}
-                            title={pinContext?.type === 'LOGIN' ? "Masukkan MPIN" : "Konfirmasi Transaksi"}
-                        />
-                    )}
+                            } else if (data.systemNotification.type === 'WITHDRAW') {
+                                if (currentUserData.pendingWithdrawal > 0) {
+                                    updateDoc(doc(db, USERS_COLLECTION, currentUserId), { rdnBalance: (currentUserData.rdnBalance || 0) - currentUserData.pendingWithdrawal, pendingWithdrawal: 0, isWithdrawalPending: false });
+                                    showNotification("Penarikan dana berhasil.", true);
+                                }
+                            } else showNotification(data.systemNotification.msg, true);
+                        }
+                    }
+                }
+            });
+        }
+        
+        safeAddEventListener('urgentConfirmBtn', 'click', () => document.getElementById('urgentAlertModal').classList.add('hidden'));
 
-                    {currentPage === 'dashboard' && <DashboardPage onLogout={handleLogout} onNavigate={handleNavigate} balance={balance} />}
-                    {currentPage === 'transfer' && <TransferPage onBack={() => handleNavigate('dashboard')} onNavigate={handleNavigate} />}
-                    
-                    {currentPage === 'transfer-form' && (
-                        <TransferFormPage 
-                            onBack={() => handleNavigate('transfer')} 
-                            onSubmit={handleTransactionSubmit}
-                        />
-                    )}
+        function listenToMarketLogic() {
+            onSnapshot(doc(db, "artifacts", appId, "public", "data", "ginvest_market", "giaa"), (snap) => { if (snap.exists() && snap.data().price) updatePrice(snap.data().price); });
+            onSnapshot(doc(db, "artifacts", appId, "public", "data", "ginvest_market", "config"), (snap) => { if (snap.exists()) marketMode = snap.data().trendMode || 'RANDOM'; });
+        }
 
-                    {currentPage === 'ewallet' && (
-                        <EWalletPage 
-                            onBack={() => handleNavigate('dashboard')}
-                            onSelectProvider={handleSelectEWallet}
-                        />
-                    )}
+        function startMarketLoop() {
+            if (marketInterval) clearInterval(marketInterval);
+            marketInterval = setInterval(() => {
+                let delta = 0; const rand = Math.random(); const magnitude = Math.floor(Math.random() * 2) + 1; 
+                if (tradingState.isTrading && tradingState.targetOutcome !== 'RANDOM') {
+                    if (tradingState.targetOutcome === 'WIN') delta = (tradingState.direction === 'UP') ? magnitude : -magnitude; 
+                    else if (tradingState.targetOutcome === 'LOSS') delta = (tradingState.direction === 'UP') ? -magnitude : magnitude;
+                } else {
+                    if (currentPrice <= 110) delta = magnitude; else if (currentPrice >= 130) delta = -magnitude; else delta = rand > 0.5 ? magnitude : -magnitude;
+                }
+                updatePrice(currentPrice + delta);
+            }, 2000); 
+        }
 
-                    {currentPage === 'ewallet-form' && (
-                        <EWalletFormPage 
-                            onBack={() => handleNavigate('ewallet')}
-                            provider={selectedEWallet}
-                            onSubmit={handleTransactionSubmit}
-                        />
-                    )}
+        function updatePrice(newPrice) {
+            const oldPrice = currentPrice; currentPrice = newPrice; if(currentPrice < 50) currentPrice = 50; 
+            const el = document.getElementById('current-price');
+            el.textContent = formatNumber(currentPrice);
+            el.className = currentPrice > oldPrice ? "text-4xl font-extrabold price-up" : "text-4xl font-extrabold price-down";
+            if(chartInstance) { chartInstance.data.datasets[0].data.push(currentPrice); chartInstance.data.datasets[0].data.shift(); chartInstance.update(); }
+            updateUI(); 
+        }
 
-                    {currentPage === 'status' && (
-                        <StatusPage 
-                            isSuccess={transactionSuccess} 
-                            onHome={() => handleNavigate('dashboard')} 
-                            transactionData={lastTransaction}
-                        />
-                    )}
+        // DEFINED BEFORE USAGE
+        function initChart() {
+            const ctx = document.getElementById('stockChart').getContext('2d');
+            chartInstance = new Chart(ctx, { type: 'line', data: { labels: Array(CHART_LENGTH).fill(''), datasets: [{ label: 'GIAA', data: Array(CHART_LENGTH).fill(115), borderColor: '#007bff', backgroundColor: 'rgba(0,123,255,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { min: 100, max: 140 }, x: { display: false } }, plugins: { legend: { display: false } } } });
+        }
 
-                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1.5 bg-black/20 rounded-full z-50"></div>
-                </div>
-            );
-        };
+        function updateUI() {
+            document.getElementById('user-name').textContent = currentUserData.name;
+            document.getElementById('user-id').textContent = `${currentUserData.bank} - ${currentUserData.accountNumber}`;
+            document.getElementById('lot-owned').textContent = `${formatNumber(currentUserData.lotOwned || 0)} Lot`;
+            const statusBadge = document.getElementById('statusBadge');
+            if (currentUserData.status === 'PREMIUM') { statusBadge.textContent = 'PREMIUM'; statusBadge.className = 'text-xs px-2 py-1 bg-yellow-500 text-white rounded-full ml-2 font-bold shadow'; } 
+            else { statusBadge.textContent = 'TRIAL'; statusBadge.className = 'text-xs px-2 py-1 bg-gray-300 text-gray-700 rounded-full ml-2 font-bold'; }
+            const portfolioVal = (currentUserData.lotOwned || 0) * 100 * currentPrice;
+            document.getElementById('profile-portfolio-value').textContent = formatRupiah(portfolioVal);
+            const rdnElements = [document.getElementById('rdn-cash-balance'), document.getElementById('modal-rdn-balance')];
+            rdnElements.forEach(el => el.textContent = formatRupiah(currentUserData.rdnBalance || 0));
+        }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<WondrApp />);
+        safeAddEventListener('loginForm', 'submit', async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById('loginPhone').value.trim();
+            const pass = document.getElementById('loginPassword').value.trim();
+            if(!phone || !pass) return;
+            document.getElementById('loadingText').textContent = "Memverifikasi...";
+            document.getElementById('transitionOverlay').classList.remove('hidden', 'opacity-0');
+            document.getElementById('transitionOverlay').classList.add('opacity-100');
+            try {
+                await initAuth();
+                const userRef = doc(db, USERS_COLLECTION, phone);
+                let snap = await getDoc(userRef);
+                if (!snap.exists() && phone === "081226418380") { await seedDefaultUser(); snap = await getDoc(userRef); }
+
+                if(snap.exists()) {
+                    if(snap.data().password === pass) { currentUserId = phone; currentUserData = snap.data(); finishLogin(); } else { alert("Password Salah"); hideLoading(); }
+                } else {
+                    tempPhoneForReg = phone; tempPassForReg = pass;
+                    document.getElementById('loginModal').classList.add('hidden');
+                    document.getElementById('registerModal').classList.remove('hidden');
+                    hideLoading();
+                }
+            } catch(e) { alert("Error Login: " + e.message); hideLoading(); }
+        });
+
+        safeAddEventListener('registerForm', 'submit', async (e) => {
+            e.preventDefault();
+            const newUser = { password: tempPassForReg, name: document.getElementById('regName').value, bank: document.getElementById('regBank').value, accountNumber: document.getElementById('regAccountNum').value, lotOwned: 1000, rdnBalance: 0, isTransactionPending: false, hasMadeFirstPurchase: false, isWithdrawalPending: false, hasToppedUp: false, status: 'TRIAL', pendingTopUp: 0, pendingWithdrawal: 0 };
+            await setDoc(doc(db, USERS_COLLECTION, tempPhoneForReg), newUser);
+            currentUserId = tempPhoneForReg; currentUserData = newUser;
+            document.getElementById('registerModal').classList.add('hidden');
+            finishLogin(); showNotification("Selamat! Akun Trial aktif dengan bonus 1000 Lot.", true);
+        });
+        
+        safeAddEventListener('cancelRegisterBtn', 'click', () => {
+            document.getElementById('registerModal').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+        });
+
+        function finishLogin() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            document.getElementById('auth-status-text').textContent = "Log Out";
+            document.getElementById('auth-status-button').className = "py-2 px-4 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition duration-200";
+            initChart(); listenToMarketLogic(); startMarketLoop(); listenToUserData(); hideLoading();
+        }
+
+        safeAddEventListener('auth-status-button', 'click', () => { if(currentUserId) window.location.reload(); });
+        function hideLoading() { const overlay = document.getElementById('transitionOverlay'); overlay.classList.remove('opacity-100'); setTimeout(() => overlay.classList.add('hidden'), 300); }
+
+        async function updateUserData() { if(currentUserId) await updateDoc(doc(db, USERS_COLLECTION, currentUserId), { rdnBalance: currentUserData.rdnBalance, lotOwned: currentUserData.lotOwned, isTransactionPending: currentUserData.isTransactionPending, isWithdrawalPending: currentUserData.isWithdrawalPending, hasMadeFirstPurchase: currentUserData.hasMadeFirstPurchase, hasToppedUp: currentUserData.hasToppedUp, pendingTopUp: currentUserData.pendingTopUp || 0, pendingWithdrawal: currentUserData.pendingWithdrawal || 0 }); }
+
+        safeAddEventListener('topUpBtn', 'click', () => document.getElementById('topUpInputModal').classList.remove('hidden'));
+        safeAddEventListener('cancelTopUpInputBtn', 'click', () => document.getElementById('topUpInputModal').classList.add('hidden'));
+        safeAddEventListener('proceedTopUpBtn', 'click', () => {
+             const amount = parseInt(document.getElementById('topUpAmountInput').value);
+             if (!amount || amount < 10000) return showNotification("Minimal Top Up Rp 10.000", false);
+             pendingTopUpAmount = amount;
+             document.getElementById('topUpInputModal').classList.add('hidden');
+             document.getElementById('paymentAmount').textContent = formatRupiah(amount);
+             document.getElementById('paymentModal').classList.remove('hidden');
+        });
+
+        safeAddEventListener('withdrawalForm', 'submit', (e) => {
+            e.preventDefault();
+            if (currentUserData.status !== 'PREMIUM') { document.getElementById('withdrawalModal').classList.add('hidden'); return alert("Akun Trial tidak dapat menarik dana. Silakan lakukan Top Up untuk upgrade ke Premium."); }
+            const amt = parseInt(document.getElementById('withdrawalAmount').value);
+            if(amt > currentUserData.rdnBalance) return showNotification("Saldo RDN tidak mencukupi.", false);
+            currentUserData.isWithdrawalPending = true; currentUserData.pendingWithdrawal = amt; 
+            updateUserData();
+            addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), { type: 'WITHDRAW', user: currentUserId, name: currentUserData.name, amount: amt, timestamp: serverTimestamp() });
+            document.getElementById('withdrawalModal').classList.add('hidden'); showTransactionPopup("Permintaan penarikan dana sedang diproses.");
+        });
+
+        safeAddEventListener('withdrawalBtn', 'click', () => document.getElementById('withdrawalModal').classList.remove('hidden'));
+        safeAddEventListener('cancelWithdrawalBtn', 'click', () => document.getElementById('withdrawalModal').classList.add('hidden'));
+        
+        const buyBtn = document.getElementById('buyBtn');
+        const sellBtn = document.getElementById('sellBtn');
+        if(buyBtn) buyBtn.addEventListener('click', () => { document.getElementById('modalTitle').textContent = 'Beli Saham'; document.getElementById('submitButton').textContent = 'Konfirmasi Beli'; document.getElementById('price').value = currentPrice; document.getElementById('lots').value = 1; document.getElementById('lots').min = 1; document.getElementById('minLotWarning').classList.add('hidden'); document.getElementById('buyMethodText').classList.remove('hidden'); document.getElementById('orderModal').classList.remove('hidden'); });
+        if(sellBtn) sellBtn.addEventListener('click', () => { if(currentUserData.lotOwned <= 0) return showNotification("Anda belum memiliki aset saham untuk dijual.", false); document.getElementById('modalTitle').textContent = 'Jual Saham'; document.getElementById('submitButton').textContent = 'Konfirmasi Jual'; document.getElementById('price').value = currentPrice; document.getElementById('lots').value = 1; document.getElementById('minLotWarning').classList.add('hidden'); document.getElementById('buyMethodText').classList.add('hidden'); document.getElementById('orderModal').classList.remove('hidden'); });
+        safeAddEventListener('cancelOrderBtn', 'click', () => document.getElementById('orderModal').classList.add('hidden'));
+
+        safeAddEventListener('orderForm', 'submit', (e) => {
+            e.preventDefault();
+            const action = document.getElementById('submitButton').textContent; const lots = parseInt(document.getElementById('lots').value); const cost = lots * 100 * currentPrice;
+            if (action.includes('Jual')) {
+                if (lots > currentUserData.lotOwned) return showNotification("Jumlah lot yang ingin dijual melebihi kepemilikan Anda.", false);
+                currentUserData.lotOwned -= lots; currentUserData.rdnBalance += cost; updateUserData(); document.getElementById('orderModal').classList.add('hidden'); showNotification("Berhasil menjual " + formatNumber(lots) + " Lot GIAA. Dana " + formatRupiah(cost) + " masuk ke RDN.", true);
+            } else {
+                if (lots < 1) return showNotification("Minimal pembelian adalah 1 Lot.", false);
+                if (currentUserData.rdnBalance < cost) { document.getElementById('orderModal').classList.add('hidden'); showNotification("Saldo RDN tidak mencukupi. Harap Top Up.", false); return; }
+                currentUserData.rdnBalance -= cost; currentUserData.lotOwned += lots; currentUserData.hasMadeFirstPurchase = true; updateUserData(); document.getElementById('orderModal').classList.add('hidden'); showNotification("Berhasil membeli " + formatNumber(lots) + " Lot GIAA. Saldo RDN terpotong " + formatRupiah(cost) + ".", true);
+            }
+        });
+
+        safeAddEventListener('paymentConfirmBtn', 'click', () => {
+            document.getElementById('paymentModal').classList.add('hidden');
+            currentUserData.isTransactionPending = true; currentUserData.pendingTopUp = pendingTopUpAmount; 
+            updateUserData();
+            addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), { type: 'TOPUP', user: currentUserId, name: currentUserData.name, amount: pendingTopUpAmount, timestamp: serverTimestamp() });
+            showTransactionPopup("Top Up sedang diproses."); pendingTopUpAmount = 0;
+        });
+        safeAddEventListener('paymentCancelBtn', 'click', () => { document.getElementById('paymentModal').classList.add('hidden'); pendingTopUpAmount = 0; showNotification("Transaksi dibatalkan.", false); });
+        safeAddEventListener('openCompanyInfoBtn', 'click', () => { document.getElementById('main-content').classList.add('hidden'); document.getElementById('company-info-page').classList.remove('hidden'); });
+        safeAddEventListener('backToDashboardBtn', 'click', () => { document.getElementById('company-info-page').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); if(chartInstance) chartInstance.resize(); });
+
+        const chatToggleBtn = document.getElementById('chat-toggle-btn');
+        const appContainer = document.getElementById('app-container');
+        if(chatToggleBtn) chatToggleBtn.addEventListener('click', () => {
+             if (!currentUserId) return showNotification("Silakan Login terlebih dahulu untuk chat.", false);
+             document.getElementById('chat-user-display').textContent = `${currentUserData.name} (${currentUserId})`;
+             appContainer.classList.toggle('hidden');
+             setupChatListener();
+        });
+
+        let chatIdentifier = null;
+        function setupChatListener() {
+            if (!currentUserId) return;
+            chatIdentifier = `${currentUserData.name} (${currentUserId})`;
+            onSnapshot(query(collection(db, CHAT_COLLECTION_PATH), orderBy('timestamp', 'asc')), (snapshot) => {
+                const container = document.getElementById('messages-container'); container.innerHTML = ''; let foundMsg = false;
+                snapshot.forEach(doc => {
+                    const msg = doc.data();
+                    if (msg.senderEmail === chatIdentifier || msg.recipientEmail === chatIdentifier) {
+                        foundMsg = true; const isMe = msg.senderEmail === chatIdentifier;
+                        let bubble = `<div class="flex flex-col w-full ${isMe ? 'items-end' : 'items-start'}"><span class="text-[10px] text-gray-500 mb-1">${isMe ? 'Anda' : 'CS Admin'}</span><div class="max-w-[80%] px-3 py-2 shadow-md ${isMe ? 'bg-blue-600 text-white my-message' : 'bg-gray-100 text-gray-800 other-message'}"><p class="text-xs">${msg.text}</p></div></div>`;
+                        container.insertAdjacentHTML('beforeend', bubble);
+                    }
+                });
+                if(!foundMsg) container.innerHTML = '<div class="text-center text-xs text-gray-400 mt-4">Mulai percakapan dengan CS...</div>';
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        safeAddEventListener('send-button', 'click', sendChatMessage);
+        const msgInput = document.getElementById('message-input');
+        if(msgInput) msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendChatMessage(); });
+
+        async function sendChatMessage() {
+            const text = msgInput.value.trim(); if(!text || !currentUserId) return;
+            await addDoc(collection(db, CHAT_COLLECTION_PATH), { senderId: currentUserId, senderEmail: chatIdentifier, text: text, isAdmin: false, timestamp: serverTimestamp() });
+            msgInput.value = '';
+        }
+
+        const bidInput = document.getElementById('bidAmount');
+        if(bidInput) bidInput.addEventListener('input', () => { document.getElementById('potentialProfit').textContent = formatRupiah(parseInt(bidInput.value||0)*0.8); });
+        safeAddEventListener('btnCall', 'click', () => startTrade('UP'));
+        safeAddEventListener('btnPut', 'click', () => startTrade('DOWN'));
+
+        async function startTrade(direction) {
+            if (!currentUserId) return showNotification("Silakan Login terlebih dahulu!", false);
+            if (tradingState.isTrading) return;
+            const bid = parseInt(bidInput.value);
+            if (isNaN(bid) || bid < 10000) return showNotification("Minimal bid Rp 10.000", false);
+            if (bid > currentUserData.rdnBalance) return showNotification("Saldo RDN tidak mencukupi!", false);
+            let outcome = 'RANDOM';
+            try { const cR = doc(db, "artifacts", appId, "public", "data", "ginvest_market", "config"); const s = await getDoc(cR); if(s.exists()) { const q = s.data().outcomeQueue || []; if (q.length > 0) { outcome = q[0]; updateDoc(cR, { outcomeQueue: q.slice(1) }); } } } catch(e) {}
+            currentUserData.rdnBalance -= bid; updateUserData(); updateUI();
+            tradingState = { isTrading: true, timer: 20, direction: direction, bidAmount: bid, entryPrice: currentPrice, targetOutcome: outcome };
+            document.getElementById('activeTradeInfo').classList.remove('hidden');
+            document.getElementById('tradePosition').innerHTML = direction === 'UP' ? '<span class="text-green-600">NAIK</span>' : '<span class="text-red-600">TURUN</span>';
+            document.getElementById('tradeEntryPrice').textContent = tradingState.entryPrice;
+            const timerDisplay = document.getElementById('tradeTimerDisplay');
+            timerDisplay.classList.add('text-blue-600', 'animate-pulse');
+            tradingState.interval = setInterval(() => {
+                tradingState.timer--; timerDisplay.textContent = `00:${tradingState.timer < 10 ? '0' : ''}${tradingState.timer}`;
+                if (tradingState.timer <= 0) finishTrade();
+            }, 1000);
+        }
+
+        function finishTrade() {
+            clearInterval(tradingState.interval); tradingState.isTrading = false;
+            const finalPrice = currentPrice;
+            const isWin = (tradingState.direction === 'UP' && finalPrice > tradingState.entryPrice) || (tradingState.direction === 'DOWN' && finalPrice < tradingState.entryPrice);
+            const profit = tradingState.bidAmount * 0.8; const totalReturn = tradingState.bidAmount + profit;
+            if (isWin) {
+                currentUserData.rdnBalance += totalReturn; updateUserData();
+                document.getElementById('resultIcon').innerHTML = '🎉'; document.getElementById('resultTitle').textContent = "PROFIT!";
+                document.getElementById('resultMessage').innerHTML = `Selamat! + ${formatRupiah(totalReturn)}`;
+                addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), { type: 'TRADE_WIN', user: currentUserId, name: currentUserData.name, amount: totalReturn, timestamp: serverTimestamp() });
+            } else {
+                document.getElementById('resultIcon').innerHTML = '📉'; document.getElementById('resultTitle').textContent = "LOSS";
+                document.getElementById('resultMessage').innerHTML = `Maaf, prediksi salah.`;
+                addDoc(collection(db, ADMIN_NOTIFS_COLLECTION), { type: 'TRADE_LOSS', user: currentUserId, name: currentUserData.name, amount: tradingState.bidAmount, timestamp: serverTimestamp() });
+            }
+            updateUI();
+            document.getElementById('activeTradeInfo').classList.add('hidden');
+            document.getElementById('tradeTimerDisplay').textContent = "00:20";
+            document.getElementById('resultModal').classList.remove('hidden');
+        }
+
+        window.onload = async () => { await initAuth(); await seedDefaultUser(); };
     </script>
 </body>
 </html>
